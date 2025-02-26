@@ -2,16 +2,16 @@ import os
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
+import json
 
 load_dotenv()
 
 # Set API Key manually if environment variable is not working
 API_KEY = os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=API_KEY)
 
 def generate_response(text):
-    client = genai.Client(api_key=API_KEY)
-
-    model = "gemini-2.0-pro-exp-02-05"
+    model = "gemini-2.0-flash"
 
     contents = [
         types.Content(
@@ -77,12 +77,17 @@ def generate_response(text):
    - `save_inventory`
    - `search_with_inventory`
    - `out_of_topic`
+   - `question`
+   - `unknown`
 
 2. **Handling Intent Cases:**
+   - If the user sending a recipe then make the intent as `save_recipe` and process the user created recipe to the recipe object, if there are some properties not mentioned then you can fill it that make sense with the recipe.
    - If intent includes `search_recipe` or `search_with_inventory`, generate a **complete recipe** inside the `recipe` object.
-   - If intent includes `save_inventory`, extract ingredients and store them.
+   - If intent includes `save_inventory`, **do not generate a full recipe**, extract ingredients and store them inside recipe.ingredients only.
    - If intent is `search_with_inventory`, use the stored inventory to find relevant recipes.
    - If intent is `out_of_topic`, **do not generate a recipe**. Just set `"intent": "out_of_topic"`.
+   - If you need to confirm something to the user or the user just answering your question then the intent is `question`, **do not generate a recipe**. 
+   - Differentiate if user `search_with_inventory`or `save_inventory', if there's no word that leads to search a recipe just `save_inventory'.
 
 3. **Recipe Object Requirements (When Searching for a Recipe):**
    - The `recipe` object must include **all properties** (`title`, `description`, `ingredients`, `steps`, `servings`, `tools`, `methods`, `keywords`).
@@ -93,6 +98,11 @@ def generate_response(text):
    - If the request is not culinary-related, **do not generate a recipe**.
    - Instead, respond conversationally and redirect to food topics with the recipe from the media, character, film, series, actor they are asking.
    - If the user keeps going off-topic, just acknowledge the request and provide friendly guidance back to cooking.
+
+5. **Film or series related recipe:**
+    - Don't need to say "There's no offical recipe for..." if its recipe from media or film, just make references to it and give the user the recipe
+
+6. If the user just answer yes and no or answering your question then backtrack to get the intent
 """
             ),
         ],
@@ -109,4 +119,60 @@ def generate_response(text):
 
     return response_text  # Return the full response
 
+def compare_inventory(db_inventory, sticky_note_html):
+    model = "gemini-2.0-flash"
 
+    prompt = f"""
+    Compare these two inventories:
+    
+    **Database Inventory:**
+    {db_inventory}
+
+    **Sticky Note Inventory (HTML to JSON):**
+    {sticky_note_html}
+
+    Identify:
+    - Differences (items in one but not the other)
+    - Quantity mismatches
+    - Missing or additional ingredients
+    - Expiry date inconsistencies
+    
+    Return a JSON of the end result with value in Sticky Note as the final value.
+    In this format:
+    [
+        {{"id": "-1", "name": "Flour", "amount": "2 cups"}},
+        {{"id": "4", "name": "Eggs", "amount": "2"}}
+    ]
+
+    Note: If ingredient already exist in db_inventory then put id, if not then put -1. If the item is not in sticky_note_html make the amount to -1.
+    """
+
+    print(prompt)
+
+    contents = [
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(text=prompt),
+            ],
+        ),
+    ]
+
+    generate_content_config = types.GenerateContentConfig(
+        temperature=1,
+        top_p=0.95,
+        top_k=64,
+        max_output_tokens=8192,
+        response_mime_type="application/json"
+    )
+
+    # Send request to Gemini API and return the response
+    response_text = ""
+    for chunk in client.models.generate_content_stream(
+        model=model,
+        contents=contents,
+        config=generate_content_config,
+    ):
+        response_text += chunk.text  # Collect the response
+
+    return response_text  # Return the full response

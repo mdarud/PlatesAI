@@ -1,81 +1,28 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, UUID4
 from typing import List, Optional
-import uuid
-from datetime import datetime
 
-# User Schema
-class UserBase(BaseModel):
-    username: str
-
-class UserCreate(UserBase):
-    pass
-
-class UserResponse(UserBase):
-    id: uuid.UUID
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-# Recipe Schema
-class RecipeBase(BaseModel):
-    title: str
-    description: Optional[str] = None
-    servings: Optional[int] = None
-    tools: Optional[List[str]] = None
-    methods: Optional[List[str]] = None
-    keywords: Optional[str] = None
-
-class RecipeCreate(RecipeBase):
-    pass
-
-class RecipeResponse(RecipeBase):
-    id: int
-    user_id: uuid.UUID
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-# Ingredient Schema
-class IngredientBase(BaseModel):
+class IngredientSchema(BaseModel):
     name: str
-    amount: Optional[str] = None
+    amount: str
 
-class IngredientCreate(IngredientBase):
-    recipe_id: int
+class RecipeSchema(BaseModel):
+    title: str
+    description: str
+    servings: str
+    tools: List[str]
+    methods: List[str]
+    keywords: str
+    ingredients: List[IngredientSchema]
 
-class IngredientResponse(IngredientBase):
-    id: int
-    recipe_id: int
+class ChatRequest(BaseModel):
+    message: str
+    user_id: UUID4  # Ensure user_id is a valid UUID
 
-    class Config:
-        from_attributes = True
-
-# Inventory Schema
-class InventoryBase(BaseModel):
+class InventorySchema(BaseModel):
+    user_id: UUID4  # Ensure user_id is a valid UUID
     ingredient_name: str
     amount: Optional[str] = None
-    expires_at: Optional[datetime] = None
-
-class InventoryCreate(InventoryBase):
-    pass
-
-class InventoryResponse(InventoryBase):
-    id: int
-    user_id: uuid.UUID
+    expires_at: Optional[str] = None  # Use ISO 8601 date format (YYYY-MM-DD)
 
     class Config:
-        from_attributes = True
-
-# Chat Schema
-class ChatBase(BaseModel):
-    user_id: uuid.UUID
-    message: str
-
-class ChatResponse(ChatBase):
-    response: str
-    timestamp: datetime
-
-    class Config:
-        from_attributes = True
+        orm_mode = True
