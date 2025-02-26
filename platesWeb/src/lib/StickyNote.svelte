@@ -13,9 +13,17 @@
     zIndex: number;
   };
 
+  interface Inventory {
+    user_id: string;
+    ingredient_name: string;
+    amount?: string;
+    expires_at?: string; // ISO 8601 format (YYYY-MM-DD)
+}
+
   const dispatch = createEventDispatcher();
   export let note: Note;
   export let sidebarWidth: number;
+  export let user_id: string;
 
   let isResizing = false;
   let isDragging = false;
@@ -28,6 +36,7 @@
 
   let showColors = false; // For toggling color options visibility
   let isEditing = false; // To track if the note is focused for editing
+  let inventoryData: Inventory[] = [];
 
   // Define the color options
   const colorOptions = [
@@ -44,6 +53,25 @@
     note = { ...note, minimized: !note.minimized, zIndex: 1 };
     dispatch("update", note);
   }
+
+  function inventoryToStickyNote(inv: Inventory[]) {
+    let html = `<ul>`;
+
+    inv.forEach((item) => {
+        const isOutOfStock = item.amount? parseInt(item.amount) == 0: false;
+        html += `<li>${isOutOfStock ? "<s>" : ""}<b>${item.ingredient_name}:</b> ${item.amount || "Unknown amount"}${isOutOfStock ? "</s>" : ""}`;
+
+        if (item.expires_at) {
+            html += ` (Expires: ${item.expires_at})`;
+        }
+
+        html += `</li>`;
+    });
+
+    html += `</ul>`;
+
+    return html;
+}
 
   function startResize(event: MouseEvent) {
     event.preventDefault();
@@ -71,7 +99,7 @@
   }
 
   function startDrag(event: MouseEvent) {
-    dispatch("bringToFront",note);
+    dispatch("bringToFront", note);
     const target = event.target as HTMLElement;
     if (target.tagName === "DIV" && target.isContentEditable) return;
 
@@ -129,13 +157,31 @@
     isEditing = true;
   }
 
-  function blurNote() {
+  async function blurNote() {
     isEditing = false;
     const contentElement = document.getElementById(
       `note-content-${note.id}`
     ) as HTMLElement;
-    note.text = contentElement.innerHTML; // Save the innerHTML to preserve styling
-    dispatch("update", note); // Dispatch the update after editing
+    console.log(contentElement.innerHTML);
+    if (note.id == -1 && note.text != contentElement.innerHTML) {
+      await updateInventoryInDB(contentElement.innerHTML);
+      contentElement.innerHTML = inventoryToStickyNote(inventoryData);
+    } 
+    note.text = contentElement.innerHTML;
+    dispatch("update", note);
+  }
+
+  async function updateInventoryInDB(text: string) {
+    // Example API call (Replace with your actual API logic)
+    const res = await fetch("http://127.0.0.1:8000/update-inventory", {
+      method: "POST",
+      body: JSON.stringify({ user_id, message: text }),
+      headers: { "Content-Type": "application/json" },
+    })
+    if (res.ok) {
+      inventoryData = await res.json();
+      note.text = inventoryToStickyNote(inventoryData);
+    }
   }
 
   function hexToRgb(hex: string) {
@@ -150,7 +196,7 @@
     return [r, g, b];
   }
 
-  function rgbToHex(r:number, g:number, b:number) {
+  function rgbToHex(r: number, g: number, b: number) {
     return (
       "#" +
       ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()
@@ -165,7 +211,7 @@
     const darkB = Math.round(b * factor);
 
     return rgbToHex(darkR, darkG, darkB);
-}
+  }
 
   // Create a new array with the selected color at the beginning
   $: dynamicColorOptions = [
@@ -299,7 +345,7 @@
   .resize-handle {
     width: 10px;
     height: 10px;
-    background: gray;
+    background: #7c42da;
     position: absolute;
     bottom: 0;
     right: 0;
@@ -313,6 +359,33 @@
     outline: none;
     white-space: pre-wrap; /* Preserve whitespace */
     padding: 10px;
+    overflow: auto;
+  }
+  /* WebKit-based browsers (Chrome, Edge, Safari) */
+  [contenteditable="true"]::-webkit-scrollbar {
+    width: 6px; /* Slim scrollbar */
+  }
+
+  [contenteditable="true"]::-webkit-scrollbar-track {
+    background: transparent; /* Optional: Makes track invisible */
+    border-radius: 10px;
+  }
+
+  [contenteditable="true"]::-webkit-scrollbar-thumb {
+    background: #7c42da; /* Gray color */
+    opacity: 0.6;
+    border-radius: 20px; /* Rounded scrollbar */
+  }
+
+  [contenteditable="true"]::-webkit-scrollbar-thumb:hover {
+    background: #7c42da; /* Slightly darker on hover */
+  }
+
+  /* Firefox */
+  [contenteditable="true"] {
+    scrollbar-width: thin; /* Slim scrollbar */
+    border-radius: 20px; /* Rounded scrollbar */
+    scrollbar-color: #7c42da98 transparent; /* Thumb color + transparent track */
   }
   .toolbar {
     display: flex;
