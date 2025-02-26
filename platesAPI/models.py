@@ -1,60 +1,51 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Text, TIMESTAMP, func
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, ForeignKey, Text, TIMESTAMP, ARRAY
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql import func
+import uuid
 from database import Base
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    username = Column(String(50), unique=True, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
 
 class Recipe(Base):
     __tablename__ = "recipes"
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    title = Column(String(255), nullable=False)
     description = Column(Text)
-    servings = Column(String)
+    servings = Column(Integer)
+    tools = Column(ARRAY(Text))  # ["knife", "oven"]
+    methods = Column(ARRAY(Text))  # ["bake", "stir"]
+    keywords = Column(Text)  # "vegan, high-protein"
     created_at = Column(TIMESTAMP, server_default=func.now())
-    keywords = Column(String)
-
-    ingredients = relationship("Ingredient", back_populates="recipe", cascade="all, delete-orphan")
-    steps = relationship("Step", back_populates="recipe", cascade="all, delete-orphan")
-    tools = relationship("Tool", back_populates="recipe", cascade="all, delete-orphan")
-    methods = relationship("Method", back_populates="recipe", cascade="all, delete-orphan")
-
 
 class Ingredient(Base):
     __tablename__ = "ingredients"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     recipe_id = Column(Integer, ForeignKey("recipes.id", ondelete="CASCADE"))
-    name = Column(String, nullable=False)
-    amount = Column(String, nullable=True)
+    name = Column(String(255), nullable=False)
+    amount = Column(String(100))  # "200g", "1 tbsp"
 
-    recipe = relationship("Recipe", back_populates="ingredients")
+class Inventory(Base):
+    __tablename__ = "inventory"
 
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    ingredient_name = Column(String(255), nullable=False)
+    amount = Column(String(100))
+    expires_at = Column(TIMESTAMP)
 
-class Step(Base):
-    __tablename__ = "steps"
+class ChatHistory(Base):
+    __tablename__ = "chat_history"
 
-    id = Column(Integer, primary_key=True, index=True)
-    recipe_id = Column(Integer, ForeignKey("recipes.id", ondelete="CASCADE"))
-    step_number = Column(Integer, nullable=False)
-    instruction = Column(Text, nullable=False)
-
-    recipe = relationship("Recipe", back_populates="steps")
-
-
-class Tool(Base):
-    __tablename__ = "tools"
-
-    id = Column(Integer, primary_key=True, index=True)
-    recipe_id = Column(Integer, ForeignKey("recipes.id", ondelete="CASCADE"))
-    tool_name = Column(String, nullable=False)
-
-    recipe = relationship("Recipe", back_populates="tools")
-
-
-class Method(Base):
-    __tablename__ = "methods"
-
-    id = Column(Integer, primary_key=True, index=True)
-    recipe_id = Column(Integer, ForeignKey("recipes.id", ondelete="CASCADE"))
-    method_name = Column(String, nullable=False)
-
-    recipe = relationship("Recipe", back_populates="methods")
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    message = Column(Text, nullable=False)
+    response = Column(Text, nullable=False)
+    timestamp = Column(TIMESTAMP, server_default=func.now())
