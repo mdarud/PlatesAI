@@ -21,16 +21,116 @@
     zIndex: number; // Add this line
   };
 
+  interface Recipe {
+    title: string;
+    description: string;
+    ingredients: Ingredient[];
+    steps: string[];
+    servings: string;
+    tools: string[];
+    methods: string[];
+    keywords: string;
+  }
+
+  interface Ingredient {
+    name: string;
+    amount: string;
+  }
+
+  interface Inventory {
+    user_id: string;
+    ingredient_name: string;
+    amount?: string;
+    expires_at?: string; // ISO 8601 format (YYYY-MM-DD)
+}
+
+
   let notes: Note[] = [];
   let nextId = 1;
   let selectedNoteIds: number[] = [];
   let editMode = false;
   let drawerMinimized = false; // State to track drawer minimization
+  let inventoryData: Inventory[] = [];
+  let messages: { text: string; sender: string }[] = [];
   $: sidebarWidth = drawerMinimized ? 60 : 210; // Adjust based on the sidebar state
+
+  let user_id: string; // Now a UUID
+
+  function getUserId() {
+    if (typeof document !== "undefined") { // Ensure client-side execution
+      const match = document.cookie.match(/user_id=([a-f0-9-]+)/);
+      return match ? match[1] : generateUserId();
+    }
+    return "";
+  }
+
+  function generateUserId() {
+    const newId = crypto.randomUUID(); // Generate a UUID
+    document.cookie = `user_id=${newId}; path=/; max-age=31536000`; // 1-year expiration
+    return newId;
+  }
 
   function saveNotes() {
     localStorage.setItem("stickyNotes", JSON.stringify(notes));
   }
+
+  function recipeToStickyNote(event: CustomEvent<Recipe>) {
+    const recipe = event.detail
+    let html = `<b>${recipe.title}</b><br><br>`;
+    html += `<i>${recipe.description}</i><br><br>`;
+
+    // Ingredients
+    html += `<b>Ingredients:</b><ul>`;
+    recipe.ingredients.forEach((ingredient) => {
+      html += `<li><b>${ingredient.name}:</b> ${ingredient.amount}</li>`;
+    });
+    html += `</ul>`;
+
+    // Steps
+    html += `<b>Steps:</b><ul>`;
+    recipe.steps.forEach((step) => {
+      html += `<li>${step}</li>`;
+    });
+    html += `</ul>`;
+
+    // Tools
+    html += `<b>Tools:</b><ul>`;
+    recipe.tools.forEach((tool) => {
+      html += `<li>${tool}</li>`;
+    });
+    html += `</ul>`;
+
+    // Methods
+    html += `<b>Methods:</b><ul>`;
+    recipe.methods.forEach((method) => {
+      html += `<li>${method}</li>`;
+    });
+    html += `</ul>`;
+
+    // Keywords
+    html += `<b>Keywords:</b> <i>${recipe.keywords}</i>`;
+
+    addNote(html);
+  }
+
+  function inventoryToStickyNote(inv: Inventory[]) {
+    let html = `<ul>`;
+
+    inv.forEach((item) => {
+        const isOutOfStock = item.amount? parseInt(item.amount) == 0: false;
+        html += `<li>${isOutOfStock ? "<s>" : ""}<b>${item.ingredient_name}:</b> ${item.amount || "Unknown amount"}${isOutOfStock ? "</s>" : ""}`;
+
+        if (item.expires_at) {
+            html += ` (Expires: ${item.expires_at})`;
+        }
+
+        html += `</li>`;
+    });
+
+    html += `</ul>`;
+
+    return html;
+}
 
   // Function to bring the clicked note to the front
   function bringToFront(event: CustomEvent<Note>) {
@@ -54,19 +154,20 @@
     console.log(notes);
   }
 
-  function addNote() {
+  function addNote(text: string = "") {
     const unminimizedNotes = notes.filter((note) => !note.minimized);
     // Determine the maximum zIndex based on unminimized notes
     const maxZIndex = unminimizedNotes.length;
+    const xPos = Math.random() * 500;
     notes = [
       ...notes,
       {
         id: nextId++,
-        text: "",
-        x: Math.random() * 500,
+        text: text,
+        x: xPos < sidebarWidth? sidebarWidth: xPos,
         y: Math.random() * 500,
         width: 200,
-        height: 150,
+        height: 170,
         color: "#FFADAD",
         minimized: false,
         zIndex: maxZIndex + 1,
@@ -80,6 +181,7 @@
     notes = notes.map((note) =>
       note.id === updatedNote.id ? updatedNote : note
     );
+    console.log(notes)
     saveNotes();
   }
 
@@ -125,10 +227,41 @@
 
   function toggleDrawer() {
     drawerMinimized = !drawerMinimized; // Toggle the drawer state
+    const sidebarW = drawerMinimized ? 60 : 210;
+    notes = notes.map((note) =>
+      note.x < sidebarW
+        ? { ...note, x: sidebarW }
+        : note
+    );
+  }
+
+  async function fetchInventory() {
+    if (!user_id) return;
+
+    const res = await fetch(`http://127.0.0.1:8000/inventory/${user_id}`);
+    if (res.ok) {
+      inventoryData = await res.json();
+      notes = notes.map((note) =>
+        note.id === -1
+          ? { ...note, text: inventoryToStickyNote(inventoryData) }
+          : note
+      );
+    }
+  }
+
+  async function fetchChatHistory() {
+    if (!user_id) return;
+
+    const res = await fetch(`http://127.0.0.1:8000/chat/history/${user_id}`);
+    if (res.ok) {
+      messages = await res.json();
+    }
+    console.log(messages)
   }
 
   onMount(() => {
     const savedNotes = localStorage.getItem("stickyNotes");
+    user_id = getUserId();
     if (savedNotes) {
       notes = JSON.parse(savedNotes);
       const inventoryNote = notes.find((item: Note) => item.id == -1);
@@ -153,6 +286,14 @@
       }
       console.log(notes);
       nextId = Math.max(...notes.map((n) => n.id), 0) + 1;
+      fetchInventory();
+      fetchChatHistory();
+      setTimeout(() => {
+      const chatContainer = document.getElementById("chat-container");
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    }, 100);
     }
   });
 </script>
@@ -166,13 +307,13 @@
       <FontAwesomeIcon icon={drawerMinimized ? faAngleRight : faAngleLeft} />
     </button>
     {#if !drawerMinimized}
-    <span class="food-icon" role="img" aria-label="Food">🍽️</span>
-    <span class="title">Plates</span>
+      <span class="food-icon" role="img" aria-label="Food">🍽️</span>
+      <span class="title">Plates</span>
     {/if}
   </div>
   {#if !drawerMinimized}
     <div class="button-container">
-      <button class="add-note-btn" on:click={addNote}>➕ Add Note</button>
+      <button class="add-note-btn" on:click={() => addNote()}>➕ Add Note</button>
       <button class="edit-notes-btn" on:click={toggleEditMode}
         >{editMode ? "Done" : "✏️ Edit"}</button
       >
@@ -233,14 +374,13 @@
         on:update={updateNote}
         on:bringToFront={bringToFront}
         {sidebarWidth}
+        {user_id}
       />
     {/if}
   {/each}
   <!-- Chat area added here -->
-<ChatArea />
+  <ChatArea on:addNote={recipeToStickyNote} on:fetchInventory={fetchInventory} {messages} {user_id}/>
 </div>
-
-
 
 <style>
   * {
