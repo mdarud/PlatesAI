@@ -23,6 +23,8 @@ misc/
 corpus/
 **/node_modules/
 **/.svelte-kit/
+__pycache__/
+**/__pycache__/
 
 # Build output
 dist/
