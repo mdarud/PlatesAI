@@ -1,44 +1,30 @@
 from sqlalchemy.orm import Session
-from models import Recipe, Ingredient, Step, Tool, Method
-from schemas import RecipeCreateSchema
+from models import User, Recipe, Ingredient, Inventory, ChatHistory
+import schemas
 
-def create_recipe(db: Session, recipe_data: RecipeCreateSchema):
-    """Create a new recipe and related data"""
-
-    # Create Recipe
-    recipe = Recipe(
-        title=recipe_data.title,
-        description=recipe_data.description,
-        servings=recipe_data.servings,
-        keywords=recipe_data.keywords
-    )
-    db.add(recipe)
-    db.flush()  # Ensure recipe.id is available before inserting related data
-
-    # Insert ingredients
-    ingredients = [Ingredient(recipe_id=recipe.id, **ingredient.dict()) for ingredient in recipe_data.ingredients]
-    db.add_all(ingredients)
-
-    # Insert steps
-    steps = [Step(recipe_id=recipe.id, **step.dict()) for step in recipe_data.steps]
-    db.add_all(steps)
-
-    # Insert tools
-    tools = [Tool(recipe_id=recipe.id, **tool.dict()) for tool in recipe_data.tools]
-    db.add_all(tools)
-
-    # Insert methods
-    methods = [Method(recipe_id=recipe.id, **method.dict()) for method in recipe_data.methods]
-    db.add_all(methods)
-
+# Create User
+def create_user(db: Session, user: schemas.UserCreate):
+    db_user = User(username=user.username)
+    db.add(db_user)
     db.commit()
-    db.refresh(recipe)
-    return recipe
+    db.refresh(db_user)
+    return db_user
 
-def get_recipe(db: Session, recipe_id: int):
-    """Retrieve a recipe by ID"""
-    return db.query(Recipe).filter(Recipe.id == recipe_id).first()
+# Create Recipe
+def create_recipe(db: Session, recipe: schemas.RecipeCreate, user_id: str):
+    db_recipe = Recipe(user_id=user_id, **recipe.dict())
+    db.add(db_recipe)
+    db.commit()
+    db.refresh(db_recipe)
+    return db_recipe
 
-def get_all_recipes(db: Session):
-    """Retrieve all recipes"""
-    return db.query(Recipe).all()
+# Create Chat Entry
+def save_chat(db: Session, user_id: str, message: str, response: str):
+    chat_entry = ChatHistory(user_id=user_id, message=message, response=response)
+    db.add(chat_entry)
+    db.commit()
+    return chat_entry
+
+# Get User's Chat History
+def get_chat_history(db: Session, user_id: str, limit=5):
+    return db.query(ChatHistory).filter(ChatHistory.user_id == user_id).order_by(ChatHistory.timestamp.desc()).limit(limit).all()
