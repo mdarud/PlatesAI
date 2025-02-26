@@ -40,3 +40,4 @@ out/
 *.swp
 *.swo
 *.bak
+*.pyc
