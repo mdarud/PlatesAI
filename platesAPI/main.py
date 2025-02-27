@@ -47,7 +47,7 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
     response = generate_response(request.message)
 
     response = json.loads(response)
-    if response["intent"] != "unknown" and response["intent"] != "question":
+    if response["intent"] != "unknown" and response["intent"] != "question" and response["intent"] != "search_with_inventory":
         chat_entry = ChatHistory(user_id=request.user_id, message=request.message, response=response["ai_response"])
         db.add(chat_entry)
         db.commit()
@@ -76,6 +76,10 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
         return {"intent": response["intent"], "ai_response": response["ai_response"], "recipe": response["recipe"]}
     elif response["intent"] == "search_with_inventory":
         response = generate_response(request.message + ". My Inventory: " + inventory_json)
+        response = json.loads(response)
+        chat_entry = ChatHistory(user_id=request.user_id, message=request.message, response=response["ai_response"])
+        db.add(chat_entry)
+        db.commit()
         return {"intent": response["intent"], "ai_response": response["ai_response"], "recipe": response["recipe"]}
     elif response["intent"] == "save_inventory":
         inventory_data = response["recipe"]["ingredients"]

@@ -77,7 +77,6 @@ def generate_response(text):
    - `save_inventory`
    - `search_with_inventory`
    - `out_of_topic`
-   - `question`
    - `unknown`
 
 2. **Handling Intent Cases:**
@@ -86,7 +85,6 @@ def generate_response(text):
    - If intent includes `save_inventory`, **do not generate a full recipe**, extract ingredients and store them inside recipe.ingredients only.
    - If intent is `search_with_inventory`, use the stored inventory to find relevant recipes.
    - If intent is `out_of_topic`, **do not generate a recipe**. Just set `"intent": "out_of_topic"`.
-   - If you need to confirm something to the user or the user just answering your question then the intent is `question`, **do not generate a recipe**. 
    - Differentiate if user `search_with_inventory`or `save_inventory', if there's no word that leads to search a recipe just `save_inventory'.
 
 3. **Recipe Object Requirements (When Searching for a Recipe):**
@@ -101,8 +99,6 @@ def generate_response(text):
 
 5. **Film or series related recipe:**
     - Don't need to say "There's no offical recipe for..." if its recipe from media or film, just make references to it and give the user the recipe
-
-6. If the user just answer yes and no or answering your question then backtrack to get the intent
 """
             ),
         ],
