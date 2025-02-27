@@ -51,6 +51,15 @@
   let drawerMinimized = false; // State to track drawer minimization
   let inventoryData: Inventory[] = [];
   let messages: { text: string; sender: string }[] = [];
+  const colorOptions = [
+    "#FFADAD",
+    "#FFD6A5",
+    "#FDFFB6",
+    "#CAFFBF",
+    "#9BF6FF",
+    "#A0C4FF",
+    "#BDB2FF",
+  ];
   $: sidebarWidth = drawerMinimized ? 60 : 210; // Adjust based on the sidebar state
   $: inventoryInit = false;
 
@@ -168,8 +177,8 @@
         x: xPos < sidebarWidth ? sidebarWidth : xPos,
         y: Math.random() * 500,
         width: 200,
-        height: 170,
-        color: "#FFADAD",
+        height: 200,
+        color: colorOptions[Math.floor(Math.random() * 7)],
         minimized: false,
         zIndex: maxZIndex + 1,
       },
