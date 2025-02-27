@@ -42,8 +42,7 @@
     ingredient_name: string;
     amount?: string;
     expires_at?: string; // ISO 8601 format (YYYY-MM-DD)
-}
-
+  }
 
   let notes: Note[] = [];
   let nextId = 1;
@@ -57,7 +56,8 @@
   let user_id: string; // Now a UUID
 
   function getUserId() {
-    if (typeof document !== "undefined") { // Ensure client-side execution
+    if (typeof document !== "undefined") {
+      // Ensure client-side execution
       const match = document.cookie.match(/user_id=([a-f0-9-]+)/);
       return match ? match[1] : generateUserId();
     }
@@ -75,7 +75,7 @@
   }
 
   function recipeToStickyNote(event: CustomEvent<Recipe>) {
-    const recipe = event.detail
+    const recipe = event.detail;
     let html = `<b>${recipe.title}</b><br><br>`;
     html += `<i>${recipe.description}</i><br><br>`;
 
@@ -117,20 +117,20 @@
     let html = `<ul>`;
 
     inv.forEach((item) => {
-        const isOutOfStock = item.amount? parseInt(item.amount) == 0: false;
-        html += `<li>${isOutOfStock ? "<s>" : ""}<b>${item.ingredient_name}:</b> ${item.amount || "Unknown amount"}${isOutOfStock ? "</s>" : ""}`;
+      const isOutOfStock = item.amount ? parseInt(item.amount) == 0 : false;
+      html += `<li>${isOutOfStock ? "<s>" : ""}<b>${item.ingredient_name}:</b> ${item.amount || "Unknown amount"}${isOutOfStock ? "</s>" : ""}`;
 
-        if (item.expires_at) {
-            html += ` (Expires: ${item.expires_at})`;
-        }
+      if (item.expires_at) {
+        html += ` (Expires: ${item.expires_at})`;
+      }
 
-        html += `</li>`;
+      html += `</li>`;
     });
 
     html += `</ul>`;
 
     return html;
-}
+  }
 
   // Function to bring the clicked note to the front
   function bringToFront(event: CustomEvent<Note>) {
@@ -164,7 +164,7 @@
       {
         id: nextId++,
         text: text,
-        x: xPos < sidebarWidth? sidebarWidth: xPos,
+        x: xPos < sidebarWidth ? sidebarWidth : xPos,
         y: Math.random() * 500,
         width: 200,
         height: 170,
@@ -181,7 +181,7 @@
     notes = notes.map((note) =>
       note.id === updatedNote.id ? updatedNote : note
     );
-    console.log(notes)
+    console.log(notes);
     saveNotes();
   }
 
@@ -229,16 +229,16 @@
     drawerMinimized = !drawerMinimized; // Toggle the drawer state
     const sidebarW = drawerMinimized ? 60 : 210;
     notes = notes.map((note) =>
-      note.x < sidebarW
-        ? { ...note, x: sidebarW }
-        : note
+      note.x < sidebarW ? { ...note, x: sidebarW } : note
     );
   }
 
   async function fetchInventory() {
     if (!user_id) return;
 
-    const res = await fetch(`http://127.0.0.1:8000/inventory/${user_id}`);
+    const res = await fetch(
+      `${import.meta.env.VITE_API_URL}/inventory/${user_id}`
+    );
     if (res.ok) {
       inventoryData = await res.json();
       notes = notes.map((note) =>
@@ -252,11 +252,13 @@
   async function fetchChatHistory() {
     if (!user_id) return;
 
-    const res = await fetch(`http://127.0.0.1:8000/chat/history/${user_id}`);
+    const res = await fetch(
+      `${import.meta.env.VITE_API_URL}/chat/history/${user_id}`
+    );
     if (res.ok) {
       messages = await res.json();
     }
-    console.log(messages)
+    console.log(messages);
   }
 
   onMount(() => {
@@ -289,11 +291,29 @@
       fetchInventory();
       fetchChatHistory();
       setTimeout(() => {
-      const chatContainer = document.getElementById("chat-container");
-      if (chatContainer) {
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+        const chatContainer = document.getElementById("chat-container");
+        if (chatContainer) {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+      }, 100);
+    } else {
+      const inventoryNote = notes.find((item: Note) => item.id == -1);
+
+      if (!inventoryNote) {
+        const newNote: Note = {
+          id: -1,
+          text: "Inventory",
+          x: 375,
+          y: 239,
+          width: 366,
+          height: 332,
+          color: "#FFADAD",
+          minimized: true,
+          zIndex: 1,
+        };
+        notes.push(newNote);
+        saveNotes();
       }
-    }, 100);
     }
   });
 </script>
@@ -313,7 +333,9 @@
   </div>
   {#if !drawerMinimized}
     <div class="button-container">
-      <button class="add-note-btn" on:click={() => addNote()}>➕ Add Note</button>
+      <button class="add-note-btn" on:click={() => addNote()}
+        >➕ Add Note</button
+      >
       <button class="edit-notes-btn" on:click={toggleEditMode}
         >{editMode ? "Done" : "✏️ Edit"}</button
       >
@@ -379,7 +401,12 @@
     {/if}
   {/each}
   <!-- Chat area added here -->
-  <ChatArea on:addNote={recipeToStickyNote} on:fetchInventory={fetchInventory} {messages} {user_id}/>
+  <ChatArea
+    on:addNote={recipeToStickyNote}
+    on:fetchInventory={fetchInventory}
+    {messages}
+    {user_id}
+  />
 </div>
 
 <style>

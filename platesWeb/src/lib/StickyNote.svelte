@@ -173,7 +173,7 @@
 
   async function updateInventoryInDB(text: string) {
     // Example API call (Replace with your actual API logic)
-    const res = await fetch("http://127.0.0.1:8000/update-inventory", {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/update-inventory`, {
       method: "POST",
       body: JSON.stringify({ user_id, message: text }),
       headers: { "Content-Type": "application/json" },
