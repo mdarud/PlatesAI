@@ -52,6 +52,7 @@
   let inventoryData: Inventory[] = [];
   let messages: { text: string; sender: string }[] = [];
   $: sidebarWidth = drawerMinimized ? 60 : 210; // Adjust based on the sidebar state
+  $: inventoryInit = false;
 
   let user_id: string; // Now a UUID
 
@@ -296,24 +297,24 @@
           chatContainer.scrollTop = chatContainer.scrollHeight;
         }
       }, 100);
-    } else {
-      const inventoryNote = notes.find((item: Note) => item.id == -1);
+    }
 
-      if (!inventoryNote) {
-        const newNote: Note = {
-          id: -1,
-          text: "Inventory",
-          x: 375,
-          y: 239,
-          width: 366,
-          height: 332,
-          color: "#FFADAD",
-          minimized: true,
-          zIndex: 1,
-        };
-        notes.push(newNote);
-        saveNotes();
-      }
+    const inventoryNote = notes.find((item: Note) => item.id == -1);
+    console.log(!inventoryNote)
+    if (!inventoryNote) {
+      const newNote: Note = {
+        id: -1,
+        text: "Inventory",
+        x: 375,
+        y: 239,
+        width: 366,
+        height: 332,
+        color: "#FFADAD",
+        minimized: true,
+        zIndex: 1,
+      };
+      notes.push(newNote);
+      saveNotes();
     }
   });
 </script>
