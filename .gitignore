@@ -18,6 +18,7 @@ yarn-error.log*
 
 # Dependency directories
 node_modules/
+memory-bank/
 bower_components/
 misc/
 corpus/
