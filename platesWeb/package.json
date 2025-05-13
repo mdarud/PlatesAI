@@ -26,6 +26,7 @@
 		"@fortawesome/free-solid-svg-icons": "^6.7.2",
 		"@fortawesome/svelte-fontawesome": "^0.2.3",
 		"@google/genai": "^0.13.0",
+		"@google/generative-ai": "^0.24.1",
 		"@neodrag/svelte": "^2.3.1",
 		"dotenv": "^16.4.7",
 		"mime": "^4.0.7"
