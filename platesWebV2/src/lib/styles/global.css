@@ -1,0 +1,353 @@
+/* PlatesAI V2 Global Styles - Elegant Theme */
+
+:root {
+  /* Color Palette - Elegant Theme */
+  --primary: #4F46E5; /* Indigo */
+  --primary-light: #818CF8;
+  --primary-dark: #4338CA;
+  --secondary: #0EA5E9; /* Sky Blue */
+  --secondary-light: #38BDF8;
+  --secondary-dark: #0284C7;
+  --accent: #F43F5E; /* Rose */
+  --accent-light: #FB7185;
+  --accent-dark: #E11D48;
+  
+  /* Surface Colors */
+  --surface-white: #FFFFFF;
+  --surface-light: #F9FAFB;
+  --surface-hover: #F3F4F6;
+  --surface-selected: #E5E7EB;
+  
+  /* Neutral Colors - For compatibility with components */
+  --white: #FFFFFF;
+  --dark: #2d3436;
+  --dark-gray: #636e72;
+  --medium-gray: #b2bec3;
+  --light-gray: #dfe6e9;
+  --off-white: #f9f9f9;
+  
+  /* Text Colors */
+  --text-dark: #111827;
+  --text-base: #374151;
+  --text-muted: #6B7280;
+  --text-light: #9CA3AF;
+  --text-on-white: #111827; /* For text on white backgrounds */
+  --text-on-dark: #FFFFFF; /* For text on dark backgrounds */
+  
+  /* Border Colors */
+  --border-light: #E5E7EB;
+  --border-hover: #D1D5DB;
+  --border-dark: #9CA3AF;
+  
+  /* Status Colors */
+  --success: #10B981;
+  --warning: #F59E0B;
+  --error: #EF4444;
+  --info: #3B82F6;
+  
+  /* Sticky Note Colors */
+  --note-coral: #FF6B6B;
+  --note-marigold: #FFB84C;
+  --note-mint: #4ECDC4;
+  --note-lavender: #A78BFA;
+  --note-sky: #60A5FA;
+  --note-rose: #F472B6;
+  --note-emerald: #34D399;
+  
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  --gradient-secondary: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%);
+  --gradient-accent: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  --gradient-berry: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%);
+  --gradient-sunset: linear-gradient(135deg, #F97316 0%, #DB2777 100%);
+  --gradient-ocean: linear-gradient(135deg, #06B6D4 0%, #3B82F6 100%);
+  --gradient-forest: linear-gradient(135deg, #10B981 0%, #3B82F6 100%);
+  
+  /* Shadows with subtle color tints */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+  
+  /* Elegant shadows with color tints */
+  --shadow-primary: 0 4px 14px 0 rgba(79, 70, 229, 0.2);
+  --shadow-secondary: 0 4px 14px 0 rgba(14, 165, 233, 0.2);
+  --shadow-accent: 0 4px 14px 0 rgba(244, 63, 94, 0.2);
+  
+  /* Fun shadows for interactive elements */
+  --shadow-fun: 0 6px 12px -2px rgba(15, 23, 42, 0.06), 0 3px 6px -3px rgba(15, 23, 42, 0.05);
+  --shadow-pop: 0 10px 20px -5px rgba(15, 23, 42, 0.08), 0 5px 10px -7px rgba(15, 23, 42, 0.07);
+  
+  /* Border Radius - More refined */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-full: 9999px;
+  
+  /* Fun border radius variations */
+  --radius-blob: 30% 70% 70% 30% / 30% 30% 70% 70%;
+  --radius-fun: 0.625rem;
+  
+  /* Spacing - Simplified naming */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
+  
+  /* Additional spacing for specific components */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-bounce: 0.75rem;
+  --space-wiggle: 1.25rem;
+  
+  /* Typography - Elegant font combinations */
+  --font-primary: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-accent: 'Playfair Display', 'Georgia', serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: var(--font-primary);
+  
+  /* Font Sizes - Same scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  
+  /* Line Heights - Same scale */
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+  
+  /* Font Weights - Same scale */
+  --font-thin: 100;
+  --font-extralight: 200;
+  --font-light: 300;
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --font-extrabold: 800;
+  
+  /* Transitions - Enhanced with elegant easing */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 300ms cubic-bezier(0.34, 1.56, 0.64, 1); /* Elegant bounce */
+  --pop-duration: 300ms;
+  --wiggle-duration: 750ms;
+  
+  /* Z-index - With semantic naming */
+  --z-hide: -1;
+  --z-base: 0;
+  --z-above: 10;
+  --z-dropdown: 20;
+  --z-sticky: 30;
+  --z-fixed: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-tooltip: 70;
+  --z-toast: 80;
+  --z-sticky-note: 100;
+  
+  /* Layout Variables */
+  --sidebar-width: 250px;
+  --right-sidebar-width: 300px;
+  --header-height: 60px;
+  --footer-height: 50px;
+  --mobile-nav-height: 60px;
+}
+
+/* Base Styles */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  font-feature-settings: normal;
+  font-variation-settings: normal;
+}
+
+body {
+  font-family: var(--font-primary);
+  line-height: var(--leading-normal);
+  color: var(--text-dark);
+  background-color: var(--surface-light);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: var(--font-bold);
+  line-height: var(--leading-tight);
+  color: var(--text-dark);
+}
+
+h1 {
+  font-size: var(--text-4xl);
+  margin-bottom: var(--space-6);
+}
+
+h2 {
+  font-size: var(--text-3xl);
+  margin-bottom: var(--space-4);
+}
+
+h3 {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-3);
+}
+
+p {
+  margin-bottom: var(--space-4);
+}
+
+/* Links */
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--primary-dark);
+}
+
+/* Buttons */
+button {
+  font-family: var(--font-primary);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  line-height: var(--leading-normal);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background-color: var(--surface-white);
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+button:hover {
+  background-color: var(--surface-hover);
+}
+
+button:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Forms */
+input, select, textarea {
+  font-family: var(--font-primary);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background-color: var(--surface-white);
+  color: var(--text-dark);
+  transition: all var(--transition-fast);
+}
+
+input:hover, select:hover, textarea:hover {
+  border-color: var(--border-hover);
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+/* Lists */
+ul, ol {
+  padding-left: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+/* Code */
+code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-hover);
+  color: var(--text-dark);
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--space-4);
+}
+
+th, td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-light);
+  text-align: left;
+}
+
+th {
+  font-weight: var(--font-semibold);
+  background-color: var(--surface-light);
+}
+
+/* Utility Classes */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+
+.font-bold { font-weight: var(--font-bold); }
+.font-medium { font-weight: var(--font-medium); }
+.font-normal { font-weight: var(--font-normal); }
+
+.text-primary { color: var(--primary); }
+.text-secondary { color: var(--secondary); }
+.text-accent { color: var(--accent); }
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-error { color: var(--error); }
+.text-info { color: var(--info); }
+
+.bg-white { background-color: var(--surface-white); }
+.bg-light { background-color: var(--surface-light); }
+.bg-hover { background-color: var(--surface-hover); }
+.bg-selected { background-color: var(--surface-selected); }
+
+.rounded-sm { border-radius: var(--radius-sm); }
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
+.rounded-2xl { border-radius: var(--radius-2xl); }
+.rounded-full { border-radius: var(--radius-full); }
+
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.shadow-xl { box-shadow: var(--shadow-xl); }
