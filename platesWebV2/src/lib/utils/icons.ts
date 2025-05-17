@@ -96,8 +96,8 @@ export const icons: Record<IconName, string> = {
 export function createIcon(name: IconName, size: number = 24, className: string = ''): string {
   const icon = icons[name];
   if (!icon) {
-    console.error(`Icon "${name}" not found`);
-    return '';
+    // Return a fallback icon instead of logging to console
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
   }
   
   // Replace width and height attributes in the SVG
