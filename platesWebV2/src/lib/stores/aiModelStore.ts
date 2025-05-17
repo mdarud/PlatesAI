@@ -21,11 +21,11 @@ const DEFAULT_MODEL_VERSIONS = {
 
 // Default model configuration
 const DEFAULT_MODEL_CONFIG: AIModelConfig = {
-  type: 'gemini',
-  apiKey: 'AIzaSyBcc6eKaoWhcB9otlVOFVSfKeVTB_ZnXOU',
+  type: 'default',
+  apiKey: '', // Will be loaded from environment variables when type is 'default'
   temperature: 0.7,
   maxTokens: 4096,
-  model: DEFAULT_MODEL_VERSIONS.gemini,
+  model: 'gemini-2.5-flash-preview-04-17' as GeminiModelVersion,
   ingredientCheckMethod: 'direct' // Default to direct comparison for reliability
 };
 

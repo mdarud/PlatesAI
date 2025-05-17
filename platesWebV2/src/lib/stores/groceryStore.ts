@@ -19,7 +19,7 @@ interface GroceryStore {
   getScheduledDates: () => { [date: string]: number };
   scheduleItemForDate: (itemId: number, date: string) => Promise<GroceryItem[]>;
   createItemForDate: (item: GroceryItem, date: string, userId: string) => Promise<GroceryItem[]>;
-  createList: (name: string, userId: string) => GroceryList;
+  createList: (name: string, userId: string) => Promise<GroceryList>;
   loadGroceryItems: (userId: string) => Promise<{ [date: string]: number }>;
   generateFromRecipes: (recipeIds: number[], userId: string) => Promise<GroceryItem[]>;
   createGroceryListFromMissingIngredients: (
@@ -454,23 +454,56 @@ function createGroceryStore(): GroceryStore {
     },
     
     // Create a new grocery list
-    createList: (name: string, userId: string) => {
-      const newId = Math.max(0, ...lists.map(l => l.id || 0)) + 1;
-      const newList: GroceryList = {
-        id: newId,
-        user_id: userId,
-        name,
-        created_at: new Date().toISOString(),
-        items: [],
-        is_completed: false
-      };
-      
-      lists = [...lists, newList];
-      
-      // Save to local storage using browser localStorage
-      localStorage.setItem(GROCERY_LISTS_KEY, JSON.stringify(lists));
-      
-      return newList;
+    createList: async (name: string, userId: string) => {
+      try {
+        // Generate a unique ID for the new list
+        const timestamp = Date.now();
+        const randomPart = Math.floor(Math.random() * 100000);
+        const newId = timestamp + randomPart;
+        
+        // Create the new list object
+        const newList: GroceryList = {
+          id: newId,
+          user_id: userId,
+          name,
+          created_at: new Date().toISOString(),
+          items: [],
+          is_completed: false
+        };
+        
+        // Save to IndexedDB via dataService
+        await groceryListService.saveGroceryList(newList);
+        
+        // Update the local lists array
+        lists = [...lists, newList];
+        
+        // Also save to localStorage as a fallback
+        localStorage.setItem(GROCERY_LISTS_KEY, JSON.stringify(lists));
+        
+        console.log('Created grocery list:', newList);
+        
+        return newList;
+      } catch (error) {
+        console.error('Error creating grocery list:', error);
+        
+        // Fallback to local creation if database save fails
+        const newId = Math.max(0, ...lists.map(l => l.id || 0)) + 1;
+        const newList: GroceryList = {
+          id: newId,
+          user_id: userId,
+          name,
+          created_at: new Date().toISOString(),
+          items: [],
+          is_completed: false
+        };
+        
+        lists = [...lists, newList];
+        
+        // Save to local storage using browser localStorage
+        localStorage.setItem(GROCERY_LISTS_KEY, JSON.stringify(lists));
+        
+        return newList;
+      }
     },
     
     // Load grocery items for a user

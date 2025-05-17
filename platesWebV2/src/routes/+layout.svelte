@@ -17,6 +17,8 @@
   import { createIcon } from '$lib/utils/icons';
   import { currentSection, type Section } from '$lib/stores/navigationStore';
   import { recipeStore } from '$lib/stores/recipeStore';
+  import { inventoryStore } from '$lib/stores/inventoryStore';
+  import { groceryStore } from '$lib/stores/groceryStore';
   import type { Recipe, InventoryItem, GroceryItem } from '$lib/services/types';
   import Settings from '$lib/components/Settings.svelte';
   import { initDataService } from '$lib/services/dataService';
@@ -226,11 +228,30 @@
             <InventoryEditor 
               item={editingInventoryItem}
               userId={user_id}
+              isEditing={!!editingInventoryItem}
               onCancel={() => {
                 showInventoryEditor = false;
                 editingInventoryItem = null;
               }}
               on:save={(event) => {
+                // Extract the edited item from event.detail
+                const editedItem = event.detail;
+                
+                // Save the item to the inventory store
+                inventoryStore.updateInventory([editedItem], user_id)
+                  .then(() => {
+                    console.log('Inventory item saved successfully');
+                  })
+                  .catch((error) => {
+                    console.error('Error saving inventory item:', error);
+                    alert('Failed to save inventory item. Please try again.');
+                  });
+                
+                // Update UI state
+                showInventoryEditor = false;
+                editingInventoryItem = null;
+              }}
+              on:back={() => {
                 showInventoryEditor = false;
                 editingInventoryItem = null;
               }}
@@ -257,12 +278,32 @@
               item={editingGroceryItem}
               userId={user_id}
               initialDate={initialGroceryDate}
+              isEditing={!!editingGroceryItem}
               onCancel={() => {
                 showGroceryItemEditor = false;
                 editingGroceryItem = null;
                 initialGroceryDate = '';
               }}
               on:save={(event) => {
+                // Extract the edited item from event.detail
+                const editedItem = event.detail;
+                
+                // Save the item to the grocery store
+                groceryStore.addItem(editedItem, user_id)
+                  .then(() => {
+                    console.log('Grocery item saved successfully');
+                  })
+                  .catch((error: Error) => {
+                    console.error('Error saving grocery item:', error);
+                    alert('Failed to save grocery item. Please try again.');
+                  });
+                
+                // Update UI state
+                showGroceryItemEditor = false;
+                editingGroceryItem = null;
+                initialGroceryDate = '';
+              }}
+              on:back={() => {
                 showGroceryItemEditor = false;
                 editingGroceryItem = null;
                 initialGroceryDate = '';

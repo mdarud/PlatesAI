@@ -26,6 +26,19 @@
     context: string;
   }
 
+  // Recipe form state
+  interface RecipeFormState {
+    isVisible: boolean;
+    originalQuery: string;
+    flavors: {[key: string]: boolean};
+    cookingMethods: {[key: string]: boolean};
+    dishTypes: {[key: string]: boolean};
+    difficulty: string;
+  }
+  
+  // Track queries that have already been asked for specifications
+  const askedQueries = new Set<string>();
+
   // Ingredient check modal state
   interface IngredientCheckState {
     isVisible: boolean;
@@ -40,6 +53,40 @@
     isWaiting: false,
     options: [],
     context: ''
+  };
+
+  // Initialize recipe form state
+  let recipeFormState: RecipeFormState = {
+    isVisible: false,
+    originalQuery: '',
+    flavors: {
+      'sweet': false,
+      'sour': false,
+      'spicy': false,
+      'savory': false,
+      'bitter': false,
+      'umami': false
+    },
+    cookingMethods: {
+      'fried': false,
+      'boiled': false,
+      'baked': false,
+      'grilled': false,
+      'steamed': false,
+      'roasted': false,
+      'stir-fried': false
+    },
+    dishTypes: {
+      'main course': false,
+      'appetizer': false,
+      'side dish': false,
+      'dessert': false,
+      'breakfast': false,
+      'soup': false,
+      'salad': false,
+      'snack': false
+    },
+    difficulty: 'medium'
   };
 
   let ingredientCheckState: IngredientCheckState = {
@@ -114,37 +161,477 @@
     { text: "Create a grocery list", action: () => sendQuickMessage("Create a grocery list") }
   ];
   
-  // Add this function to handle generic recipe requests
+  // Function to extract inventory items from natural language
+  function extractInventoryItems(text: string): InventoryItem[] {
+    const items: InventoryItem[] = [];
+    
+    // Number word mapping
+    const numberWords: Record<string, string> = {
+      'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
+      'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10'
+    };
+    
+    // Patterns for inventory statements
+    const inventoryPatterns = [
+      // "I have 2 apples"
+      /I have (\d+|one|two|three|four|five|six|seven|eight|nine|ten) ([a-zA-Z\s]+)/i,
+      // "Save three eggs to my inventory"
+      /Save (\d+|one|two|three|four|five|six|seven|eight|nine|ten) ([a-zA-Z\s]+) to (?:my|the) inventory/i,
+      // "Add 3 chicken thighs to my inventory"
+      /Add (\d+|one|two|three|four|five|six|seven|eight|nine|ten) ([a-zA-Z\s]+) to (?:my|the) inventory/i
+    ];
+    
+    // Check each pattern
+    for (const pattern of inventoryPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        let amount = match[1].toLowerCase();
+        // Convert word numbers to digits
+        if (numberWords[amount]) {
+          amount = numberWords[amount];
+        }
+        
+        const name = match[2].trim();
+        
+        // Create inventory item
+        items.push({
+          user_id,
+          ingredient_name: name,
+          amount,
+          category: getCategoryForIngredient(name)
+        });
+      }
+    }
+    
+    return items;
+  }
+  
+  // Function to extract grocery items from natural language
+  function extractGroceryItems(text: string): GroceryItem[] {
+    const items: GroceryItem[] = [];
+    
+    // Number word mapping
+    const numberWords: Record<string, string> = {
+      'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
+      'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10'
+    };
+    
+    // Date mapping for relative dates
+    function getDateFromRelative(relativeDate: string): string | undefined {
+      const today = new Date();
+      
+      if (relativeDate.toLowerCase() === 'tomorrow') {
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow.toISOString().split('T')[0];
+      } else if (relativeDate.toLowerCase() === 'next week') {
+        const nextWeek = new Date(today);
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        return nextWeek.toISOString().split('T')[0];
+      } else if (relativeDate.toLowerCase().includes('day')) {
+        // Handle "on Monday", "on Tuesday", etc.
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const targetDay = dayNames.findIndex(day => relativeDate.toLowerCase().includes(day));
+        
+        if (targetDay !== -1) {
+          const date = new Date(today);
+          const currentDay = date.getDay();
+          let daysToAdd = targetDay - currentDay;
+          
+          // If the day has already passed this week, go to next week
+          if (daysToAdd <= 0) {
+            daysToAdd += 7;
+          }
+          
+          date.setDate(date.getDate() + daysToAdd);
+          return date.toISOString().split('T')[0];
+        }
+      }
+      
+      return undefined;
+    }
+    
+  // Patterns for grocery statements
+  const groceryPatterns = [
+    // "Remind me to buy honey tomorrow"
+    /Remind me to buy ([a-zA-Z\s]+) (tomorrow|next week|on \w+)/i,
+    // "Put 3 chicken thighs to my grocery list"
+    /Put (\d+|one|two|three|four|five|six|seven|eight|nine|ten) ([a-zA-Z\s]+) (?:on|to|in) (?:my|the) grocery list/i,
+    // "Add 2 chocolate to my grocery list" - Pattern for quantity + item
+    /Add (\d+|one|two|three|four|five|six|seven|eight|nine|ten) ([a-zA-Z\s]+) to (?:my|the) grocery(?:\s+list)?/i,
+    // "Add honey to my grocery list" - Pattern for item without explicit quantity
+    /Add ([a-zA-Z\s]+) to (?:my|the) grocery(?:\s+list)?/i
+  ];
+    
+    // Check each pattern
+    for (const pattern of groceryPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        let name, amount = '1';
+        let scheduledDate: string | undefined;
+        
+        // Handle different pattern matches
+        if (pattern.toString().includes('Remind me')) {
+          name = match[1].trim();
+          
+          // Handle date
+          const dateText = match[2].toLowerCase();
+          scheduledDate = getDateFromRelative(dateText);
+        } else if (pattern.toString().includes('Put')) {
+          amount = match[1].toLowerCase();
+          // Convert word numbers to digits
+          if (numberWords[amount]) {
+            amount = numberWords[amount];
+          }
+          name = match[2].trim();
+        } else if (pattern.toString().includes('Add') && pattern.toString().includes('\\d+|one|two|three|four|five|six|seven|eight|nine|ten')) {
+          // This is the "Add 2 chocolate to my grocery" pattern
+          amount = match[1].toLowerCase();
+          // Convert word numbers to digits
+          if (numberWords[amount]) {
+            amount = numberWords[amount];
+          }
+          name = match[2].trim();
+        } else {
+          // This is the "Add honey to my grocery list" pattern
+          name = match[1].trim();
+        }
+        
+        // Create grocery item
+        items.push({
+          user_id,
+          name,
+          amount,
+          category: getCategoryForIngredient(name),
+          scheduled_date: scheduledDate,
+          is_checked: false,
+          checked: false
+        });
+      }
+    }
+    
+    return items;
+  }
+  
+  // Enhanced function to handle generic recipe requests with form
   async function handleGenericRecipeRequest(userMessage: string): Promise<boolean> {
+    // Check if we've already asked for specifications for this query
+    if (askedQueries.has(userMessage.toLowerCase())) {
+      return false;
+    }
+    
     const genericTerms = ['recipe', 'dish', 'meal', 'cook', 'make'];
     const isGenericRequest = genericTerms.some(term => userMessage.toLowerCase().includes(term));
     
     if (isGenericRequest && !userMessage.includes('specific')) {
+      // Extract keywords from the user message
+      const commonWords = ['a', 'the', 'recipe', 'dish', 'meal', 'cook', 'make', 'me', 'for', 'with', 'and', 'or', 'some', 'please', 'can', 'you', 'i', 'want', 'would', 'like'];
       const keywords = userMessage.toLowerCase()
         .split(' ')
-        .filter(word => 
-          !['a', 'the', 'recipe', 'dish', 'meal', 'cook', 'make', 'me', 'for', 'with', 'and', 'or'].includes(word)
-        );
+        .filter(word => !commonWords.includes(word));
       
-      if (keywords.length > 0) {
-        // Generate 2-3 specific options based on the generic request
-        const options = [
-          `a traditional ${keywords.join(' ')}`,
-          `a modern fusion ${keywords.join(' ')}`,
-          `a quick and easy ${keywords.join(' ')}`
-        ];
-        
-        confirmationState = {
-          isWaiting: true,
-          options,
-          context: userMessage
-        };
-        
-        return true;
+      // Only skip the form if there are more than 3 keywords or if it contains specific phrases
+      const keywordCount = keywords.length;
+      
+      if (keywordCount > 3) {
+        // If there are more than 3 keywords or specific phrases, process the query directly
+        return false;
       }
+      
+      // Add user message to chat
+      messages = [...messages, { 
+        text: userMessage, 
+        sender: 'user',
+        timestamp: new Date()
+      }];
+      
+      // Save chat history to localStorage
+      localStorage.setItem('platesai_chat_history', JSON.stringify(messages));
+      
+      // Clear input and scroll to bottom
+      newMessage = '';
+      scrollToBottom();
+      
+      // Add this query to the set of asked queries
+      askedQueries.add(userMessage.toLowerCase());
+      
+      // Reset recipe form state
+      recipeFormState = {
+        isVisible: true,
+        originalQuery: userMessage,
+        flavors: {
+          'sweet': false,
+          'sour': false,
+          'spicy': false,
+          'savory': false,
+          'bitter': false,
+          'umami': false
+        },
+        cookingMethods: {
+          'fried': false,
+          'boiled': false,
+          'baked': false,
+          'grilled': false,
+          'steamed': false,
+          'roasted': false,
+          'stir-fried': false
+        },
+        dishTypes: {
+          'main course': false,
+          'appetizer': false,
+          'side dish': false,
+          'dessert': false,
+          'breakfast': false,
+          'soup': false,
+          'salad': false,
+          'snack': false
+        },
+        difficulty: 'medium'
+      };
+      
+      // Add a response message
+      messages = [...messages, { 
+        text: "I'd be happy to help you find a recipe! Please specify your preferences:", 
+        sender: 'ai',
+        timestamp: new Date()
+      }];
+      
+      // Save updated chat history to localStorage
+      localStorage.setItem('platesai_chat_history', JSON.stringify(messages));
+      
+      // Scroll to bottom
+      scrollToBottom();
+      
+      return true;
     }
     
     return false;
+  }
+  
+  // Function to submit recipe form
+  async function submitRecipeForm() {
+    // Collect selected flavors
+    const selectedFlavors = Object.entries(recipeFormState.flavors)
+      .filter(([_, selected]) => selected)
+      .map(([flavor, _]) => flavor);
+    
+    // Collect selected cooking methods
+    const selectedMethods = Object.entries(recipeFormState.cookingMethods)
+      .filter(([_, selected]) => selected)
+      .map(([method, _]) => method);
+    
+    // Collect selected dish types
+    const selectedDishTypes = Object.entries(recipeFormState.dishTypes)
+      .filter(([_, selected]) => selected)
+      .map(([dishType, _]) => dishType);
+    
+    // Build enhanced query
+    let enhancedQuery = recipeFormState.originalQuery;
+    
+    if (selectedFlavors.length > 0) {
+      enhancedQuery += ` with ${selectedFlavors.join(' and ')} flavors`;
+    }
+    
+    if (selectedMethods.length > 0) {
+      enhancedQuery += ` that is ${selectedMethods.join(' and ')}`;
+    }
+    
+    if (selectedDishTypes.length > 0) {
+      enhancedQuery += ` as a ${selectedDishTypes.join(' or ')}`;
+    }
+    
+    enhancedQuery += ` with ${recipeFormState.difficulty} difficulty`;
+    
+    // Hide the form
+    recipeFormState.isVisible = false;
+    
+    // Add user message to chat
+    messages = [...messages, { 
+      text: enhancedQuery, 
+      sender: 'user',
+      timestamp: new Date()
+    }];
+    
+    // Save chat history to localStorage
+    localStorage.setItem('platesai_chat_history', JSON.stringify(messages));
+    
+    // Clear input and scroll to bottom
+    newMessage = '';
+    scrollToBottom();
+    
+    // Show loading state
+    isLoading = true;
+    
+    try {
+      // Create chat request with model config
+      const request: ChatRequest = {
+        message: enhancedQuery,
+        user_id: user_id,
+        modelConfig: modelConfig
+      };
+      
+      // Get AI response directly, bypassing handleGenericRecipeRequest
+      const response = await aiService.generateResponse(request);
+      
+      // Process the response similar to sendMessage but without triggering handleGenericRecipeRequest
+      let displayText = response.ai_response;
+      
+      // If the response contains a recipe, clean up the display text to remove any JSON
+      if (response.recipe) {
+        // Check if the response contains JSON
+        if (displayText.includes('{') && displayText.includes('"recipe":')) {
+          // Try to extract just the conversational part before the JSON
+          const textMatch = displayText.match(/^(.*?)(?:\{|\[)/);
+          if (textMatch && textMatch[1]) {
+            displayText = textMatch[1].trim();
+          } else {
+            // If we can't extract it, use a generic message
+            displayText = `Here's a ${response.recipe.title} recipe for you!`;
+          }
+        }
+        
+        // Add the initial response
+        messages = [...messages, { 
+          text: displayText, 
+          sender: 'ai',
+          timestamp: new Date()
+        }];
+        
+        // Add a separate message with the recipe
+        messages = [...messages, { 
+          text: '', 
+          sender: 'ai',
+          timestamp: new Date(),
+          recipe: response.recipe
+        }];
+      } else {
+        // Add just the text response if no recipe
+        messages = [...messages, { 
+          text: displayText, 
+          sender: 'ai',
+          timestamp: new Date()
+        }];
+      }
+      
+      // Save updated chat history to localStorage
+      localStorage.setItem('platesai_chat_history', JSON.stringify(messages));
+      
+      // Process the response based on its content
+      processAIResponse(response);
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      
+      // Add error message
+      messages = [...messages, { 
+        text: "Sorry, I encountered an error while processing your request. Please try again later.", 
+        sender: 'ai',
+        timestamp: new Date()
+      }];
+      
+      // Save updated chat history to localStorage
+      localStorage.setItem('platesai_chat_history', JSON.stringify(messages));
+    } finally {
+      // Hide loading state and scroll to bottom
+      isLoading = false;
+      scrollToBottom();
+    }
+  }
+  
+  // Function to continue with original query
+  async function continueWithOriginalQuery() {
+    // Hide the form
+    recipeFormState.isVisible = false;
+    
+    // Add user message to chat
+    messages = [...messages, { 
+      text: recipeFormState.originalQuery, 
+      sender: 'user',
+      timestamp: new Date()
+    }];
+    
+    // Save chat history to localStorage
+    localStorage.setItem('platesai_chat_history', JSON.stringify(messages));
+    
+    // Clear input and scroll to bottom
+    newMessage = '';
+    scrollToBottom();
+    
+    // Show loading state
+    isLoading = true;
+    
+    try {
+      // Create chat request with model config
+      const request: ChatRequest = {
+        message: recipeFormState.originalQuery,
+        user_id: user_id,
+        modelConfig: modelConfig
+      };
+      
+      // Get AI response directly, bypassing handleGenericRecipeRequest
+      const response = await aiService.generateResponse(request);
+      
+      // Process the response similar to sendMessage but without triggering handleGenericRecipeRequest
+      let displayText = response.ai_response;
+      
+      // If the response contains a recipe, clean up the display text to remove any JSON
+      if (response.recipe) {
+        // Check if the response contains JSON
+        if (displayText.includes('{') && displayText.includes('"recipe":')) {
+          // Try to extract just the conversational part before the JSON
+          const textMatch = displayText.match(/^(.*?)(?:\{|\[)/);
+          if (textMatch && textMatch[1]) {
+            displayText = textMatch[1].trim();
+          } else {
+            // If we can't extract it, use a generic message
+            displayText = `Here's a ${response.recipe.title} recipe for you!`;
+          }
+        }
+        
+        // Add the initial response
+        messages = [...messages, { 
+          text: displayText, 
+          sender: 'ai',
+          timestamp: new Date()
+        }];
+        
+        // Add a separate message with the recipe
+        messages = [...messages, { 
+          text: '', 
+          sender: 'ai',
+          timestamp: new Date(),
+          recipe: response.recipe
+        }];
+      } else {
+        // Add just the text response if no recipe
+        messages = [...messages, { 
+          text: displayText, 
+          sender: 'ai',
+          timestamp: new Date()
+        }];
+      }
+      
+      // Save updated chat history to localStorage
+      localStorage.setItem('platesai_chat_history', JSON.stringify(messages));
+      
+      // Process the response based on its content
+      processAIResponse(response);
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      
+      // Add error message
+      messages = [...messages, { 
+        text: "Sorry, I encountered an error while processing your request. Please try again later.", 
+        sender: 'ai',
+        timestamp: new Date()
+      }];
+      
+      // Save updated chat history to localStorage
+      localStorage.setItem('platesai_chat_history', JSON.stringify(messages));
+    } finally {
+      // Hide loading state and scroll to bottom
+      isLoading = false;
+      scrollToBottom();
+    }
   }
   
   // Modify the sendMessage function
@@ -165,7 +652,163 @@
       return undefined;
     }
     
+    // Check if this is an inventory statement
+    const inventoryItems = extractInventoryItems(messageToSend);
+    if (inventoryItems.length > 0) {
+      // Add user message
+      messages = [...messages, { 
+        text: messageToSend, 
+        sender: 'user',
+        timestamp: new Date()
+      }];
+      
+      // Clear input and scroll to bottom
+      newMessage = '';
+      scrollToBottom();
+      
+      // Update inventory
+      inventoryStore.updateInventory(inventoryItems, user_id);
+      
+      // Format inventory for sticky note (but don't create it automatically)
+      // const inventoryText = formatInventoryForNote(inventoryItems);
+      // notesStore.addNote(inventoryText, window.innerWidth - 400, 300);
+      
+      // Add AI confirmation message
+      messages = [...messages, { 
+        text: `I've added ${inventoryItems.length} item(s) to your inventory.`, 
+        sender: 'ai',
+        timestamp: new Date()
+      }];
+      
+      // Save chat history to localStorage
+      localStorage.setItem('platesai_chat_history', JSON.stringify(messages));
+      scrollToBottom();
+      
+      return {
+        intent: 'save_inventory',
+        ai_response: `I've added ${inventoryItems.length} item(s) to your inventory.`,
+        inventory_items: inventoryItems
+      };
+    }
+    
+  // Check if this is a grocery statement
+  const groceryItems = extractGroceryItems(messageToSend);
+  if (groceryItems.length > 0) {
     // Add user message
+    messages = [...messages, { 
+      text: messageToSend, 
+      sender: 'user',
+      timestamp: new Date()
+    }];
+    
+    // Clear input and scroll to bottom
+    newMessage = '';
+    scrollToBottom();
+    
+    try {
+      console.log('Creating grocery list with items:', groceryItems);
+      
+      // Create a grocery list with a more descriptive name
+      const listName = `Shopping List (${new Date().toLocaleDateString()})`;
+      
+      // Create the list through the dataService to ensure it's properly saved to the database
+      const groceryList = await groceryStore.createList(listName, user_id);
+      console.log('Created grocery list:', groceryList);
+      
+      // Ensure the list has a valid ID
+      if (!groceryList || !groceryList.id) {
+        throw new Error('Failed to create grocery list with valid ID');
+      }
+      
+      // Add items to the list one by one to ensure they're properly saved
+      const savedItems = [];
+      for (const item of groceryItems) {
+        console.log('Adding grocery item to list:', item);
+        
+        // Ensure the item has all required fields
+        const itemWithListId = {
+          ...item,
+          id: Date.now() + Math.floor(Math.random() * 1000), // Ensure unique ID
+          list_id: groceryList.id,
+          user_id: user_id,
+          name: item.name || '',
+          amount: item.amount || '1',
+          checked: false,
+          is_checked: false,
+          category: item.category || getCategoryForIngredient(item.name || '')
+        };
+        
+        // Save the item to the grocery store
+        try {
+          const result = await groceryStore.addItem(itemWithListId, user_id);
+          console.log('Grocery item added, result:', result);
+          savedItems.push(itemWithListId);
+          
+          // Small delay to prevent race conditions
+          await new Promise(resolve => setTimeout(resolve, 50));
+        } catch (itemError) {
+          console.error('Error adding grocery item:', itemError);
+          // Continue with other items even if one fails
+        }
+      }
+      
+      // Force a refresh of the grocery store to ensure items are loaded
+      await groceryStore.loadGroceryItems(user_id);
+      
+      // Format grocery list for sticky note
+      const groceryText = formatGroceryListForNote({
+        id: groceryList.id,
+        user_id: user_id,
+        name: listName,
+        created_at: new Date().toISOString(),
+        items: savedItems,
+        is_completed: false
+      });
+      
+      // Add the note to the store for visual feedback
+      notesStore.addNote(groceryText, window.innerWidth - 400, 500, user_id);
+      
+      // Add AI confirmation message
+      messages = [...messages, { 
+        text: `I've added ${groceryItems.length} item(s) to your grocery list "${listName}".`, 
+        sender: 'ai',
+        timestamp: new Date()
+      }];
+      
+      // Save chat history to localStorage
+      localStorage.setItem('platesai_chat_history', JSON.stringify(messages));
+      scrollToBottom();
+      
+      return {
+        intent: 'create_grocery_list',
+        ai_response: `I've added ${groceryItems.length} item(s) to your grocery list.`,
+        grocery_list: {
+          ...groceryList,
+          items: savedItems
+        }
+      };
+    } catch (error) {
+      console.error('Error creating grocery list:', error);
+      
+      // Add error message
+      messages = [...messages, { 
+        text: "Sorry, I encountered an error while creating your grocery list. Please try again.", 
+        sender: 'ai',
+        timestamp: new Date()
+      }];
+      
+      // Save chat history to localStorage
+      localStorage.setItem('platesai_chat_history', JSON.stringify(messages));
+      scrollToBottom();
+      
+      return {
+        intent: 'error',
+        ai_response: "Sorry, I encountered an error while creating your grocery list. Please try again."
+      };
+    }
+  }
+    
+    // Add user message for non-inventory, non-grocery messages
     messages = [...messages, { 
       text: messageToSend, 
       sender: 'user',
@@ -948,7 +1591,7 @@
         
         if (result.missingIngredients.length > 0) {
           // Create a new grocery list
-          const groceryList = groceryStore.createList(`Shopping for ${recipe.title}`, user_id);
+          const groceryList = await groceryStore.createList(`Shopping for ${recipe.title}`, user_id);
           
           // Add each missing ingredient as an item
           const groceryItems = result.missingIngredients.map((ingredient, index) => {
@@ -971,13 +1614,14 @@
             return item;
           });
           
-          // Update the grocery list with the items
-          groceryList.items = groceryItems;
-          
           // Format grocery list for sticky note
           const groceryText = formatGroceryListForNote({
-            ...groceryList,
-            name: `Shopping for ${recipe.title}`
+            id: groceryList.id,
+            user_id: user_id,
+            name: `Shopping for ${recipe.title}`,
+            created_at: new Date().toISOString(),
+            items: groceryItems,
+            is_completed: false
           });
           
           // Add the note to the store for visual feedback
@@ -1156,13 +1800,28 @@
   <div class="chat-container">
     <div class="chat-header">
       <h2>Ask PlatesAI</h2>
-      <p>Get recipes, cooking tips, and more</p>
+      <p style="color: var(--white)">Get recipes, cooking tips, and more</p>
     </div>
     
     <div class="chat-messages" bind:this={chatContainer}>
       {#each messages as message, index}
         <div class="message {message.sender}">
           <div class="message-content">
+            <div class="message-actions">
+              <button 
+                class="action-icon" 
+                title="Save to sticky note"
+                on:click={() => {
+                  if (message.recipe) {
+                    notesStore.addNote(formatRecipeForNote(message.recipe), window.innerWidth - 400, 100);
+                  } else {
+                    notesStore.addNote(message.text, window.innerWidth - 400, 300);
+                  }
+                }}
+              >
+                {@html createIcon('notes', 16)}
+              </button>
+            </div>
             {#if message.recipe}
               <div class="recipe-card">
                 <div class="recipe-title">
@@ -1298,6 +1957,110 @@
               >
                 Something else...
               </button>
+            </div>
+          </div>
+        </div>
+      {/if}
+      
+      <!-- Recipe Form -->
+      {#if recipeFormState.isVisible}
+        <div class="message ai">
+          <div class="message-content">
+            <div class="recipe-form">
+              <h4>Recipe Preferences</h4>
+              
+              <div class="form-section">
+                <h5>Flavor Profile</h5>
+                <div class="checkbox-group">
+                  {#each Object.keys(recipeFormState.flavors) as flavor}
+                    <label class="checkbox-label">
+                      <input 
+                        type="checkbox" 
+                        bind:checked={recipeFormState.flavors[flavor]} 
+                      />
+                      <span class="checkbox-text">{flavor}</span>
+                    </label>
+                  {/each}
+                </div>
+              </div>
+              
+              <div class="form-section">
+                <h5>Cooking Method</h5>
+                <div class="checkbox-group">
+                  {#each Object.keys(recipeFormState.cookingMethods) as method}
+                    <label class="checkbox-label">
+                      <input 
+                        type="checkbox" 
+                        bind:checked={recipeFormState.cookingMethods[method]} 
+                      />
+                      <span class="checkbox-text">{method}</span>
+                    </label>
+                  {/each}
+                </div>
+              </div>
+              
+              <div class="form-section">
+                <h5>Dish Type</h5>
+                <div class="checkbox-group">
+                  {#each Object.keys(recipeFormState.dishTypes) as dishType}
+                    <label class="checkbox-label">
+                      <input 
+                        type="checkbox" 
+                        bind:checked={recipeFormState.dishTypes[dishType]} 
+                      />
+                      <span class="checkbox-text">{dishType}</span>
+                    </label>
+                  {/each}
+                </div>
+              </div>
+              
+              <div class="form-section">
+                <h5>Difficulty</h5>
+                <div class="radio-group">
+                  <label class="radio-label">
+                    <input 
+                      type="radio" 
+                      name="difficulty" 
+                      value="easy" 
+                      bind:group={recipeFormState.difficulty} 
+                    />
+                    <span class="radio-text">Easy</span>
+                  </label>
+                  <label class="radio-label">
+                    <input 
+                      type="radio" 
+                      name="difficulty" 
+                      value="medium" 
+                      bind:group={recipeFormState.difficulty} 
+                    />
+                    <span class="radio-text">Medium</span>
+                  </label>
+                  <label class="radio-label">
+                    <input 
+                      type="radio" 
+                      name="difficulty" 
+                      value="hard" 
+                      bind:group={recipeFormState.difficulty} 
+                    />
+                    <span class="radio-text">Hard</span>
+                  </label>
+                </div>
+              </div>
+              
+              <div class="form-actions">
+                <button 
+                  class="form-button continue" 
+                  on:click={continueWithOriginalQuery}
+                >
+                  Continue with original query
+                </button>
+                <button 
+                  class="form-button submit" 
+                  on:click={submitRecipeForm}
+                >
+                  Submit with preferences
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1463,7 +2226,10 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: var(--space-md);
+    padding: var(--space-xl);
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
   }
   
   .chat-container {
@@ -1479,11 +2245,12 @@
   
   .chat-header {
     padding: var(--space-md);
-    background: var(--gradient-berry);
-    color: var(--white);
+    background-color: var(--accent-light);
+    color: var(--dark);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     position: relative;
     overflow: hidden;
+    border-bottom: 2px dashed var(--primary-light);
   }
   
   .chat-header::before {
@@ -1554,7 +2321,7 @@
   }
   
   .message.user .message-content {
-    background: var(--gradient-berry);
+    background: var(--accent-light);
     color: var(--white);
     border-bottom-right-radius: var(--radius-sm);
     box-shadow: var(--shadow-fun);
@@ -1567,7 +2334,7 @@
     right: 0;
     width: 16px;
     height: 16px;
-    background: var(--primary);
+    background: var(--accent-light);
     clip-path: polygon(0 0, 100% 0, 100% 100%);
   }
   
@@ -1610,9 +2377,12 @@
   .message-actions {
     display: flex;
     gap: var(--space-xs);
-    margin-top: var(--space-sm);
+    position: absolute;
+    bottom: -15px;
+    right: 5px;
     opacity: 0;
     transition: opacity var(--transition-fast);
+    z-index: 10;
   }
   
   .message-content:hover .message-actions {
@@ -2458,5 +3228,111 @@
   .confirmation-option.custom {
     background-color: var(--primary-light);
     color: var(--white);
+  }
+  
+  /* Recipe Form Styles */
+  .recipe-form {
+    background-color: var(--white);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    margin: var(--space-sm) 0;
+    border: 1px solid var(--light-gray);
+  }
+  
+  .recipe-form h4 {
+    margin-top: 0;
+    margin-bottom: var(--space-md);
+    color: var(--primary);
+    font-size: 1.2rem;
+    font-weight: 600;
+    text-align: center;
+    border-bottom: 1px solid var(--light-gray);
+    padding-bottom: var(--space-sm);
+  }
+  
+  .form-section {
+    margin-bottom: var(--space-md);
+  }
+  
+  .form-section h5 {
+    margin-top: 0;
+    margin-bottom: var(--space-sm);
+    color: var(--dark);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  
+  .checkbox-group, .radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+  }
+  
+  .checkbox-label, .radio-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    background-color: var(--light-gray);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  
+  .checkbox-label:hover, .radio-label:hover {
+    background-color: var(--primary-light);
+    color: var(--white);
+  }
+  
+  .checkbox-text, .radio-text {
+    font-size: 0.9rem;
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-lg);
+  }
+  
+  .form-button {
+    flex: 1;
+    padding: var(--space-sm) var(--space-md);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+  }
+  
+  .form-button.continue {
+    background-color: var(--light-gray);
+    color: var(--dark);
+  }
+  
+  .form-button.submit {
+    background-color: var(--primary);
+    color: var(--white);
+  }
+  
+  .form-button:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+  }
+  
+  @media (max-width: 768px) {
+    .checkbox-group, .radio-group {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .form-actions {
+      flex-direction: column;
+    }
+    
+    .form-button {
+      width: 100%;
+    }
   }
 </style>

@@ -648,7 +648,7 @@ export const groceryListService = {
       name: ingredient.name,
       amount: ingredient.amount,
       unit: ingredient.unit,
-      category: getCategoryForIngredient(ingredient.name),
+      category: getCategoryForIngredient(ingredient.name || ''),
       is_checked: false,
       checked: false
     }));
@@ -679,7 +679,7 @@ export const groceryListService = {
 
 // Timer Service
 export const timerService = {
-  getTimers: async (): Promise<Timer[]> => {
+  getTimers: async (userId: string): Promise<Timer[]> => {
     if (!browser) return [];
     
     if (isIndexedDBAvailable) {
@@ -688,10 +688,10 @@ export const timerService = {
       } catch (error) {
         console.error('Error getting timers from IndexedDB:', error);
         // Fall back to localStorage
-        return storageService.timerService.getTimers();
+        return storageService.timerService.getTimers(userId);
       }
     } else {
-      return storageService.timerService.getTimers();
+      return storageService.timerService.getTimers(userId);
     }
   },
   
@@ -700,7 +700,7 @@ export const timerService = {
     
     // Generate a new ID if not provided
     if (!timer.id) {
-      const timers = await timerService.getTimers();
+      const timers = await timerService.getTimers(timer.user_id);
       const maxId = timers.length > 0 ? Math.max(...timers.map(t => t.id)) : 0;
       timer.id = maxId + 1;
     }
@@ -750,6 +750,7 @@ export const timerService = {
     
     const timer: Timer = {
       id: 0, // Will be assigned in saveTimer
+      user_id: "", // You should pass the user_id as a parameter and use it here
       label,
       duration: totalSeconds,
       remaining: totalSeconds,
@@ -816,6 +817,7 @@ export const notesService = {
         
         const localStorageNote = {
           id: parseInt(note.id),
+          title: note.title || `Note ${note.id}`,
           text: note.content,
           x: note.position.x,
           y: note.position.y,
@@ -841,6 +843,7 @@ export const notesService = {
       
       const localStorageNote = {
         id: parseInt(note.id),
+        title: note.title || `Note ${note.id}`,
         text: note.content,
         x: note.position.x,
         y: note.position.y,

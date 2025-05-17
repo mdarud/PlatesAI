@@ -47,6 +47,9 @@
     checkMobile();
     window.addEventListener('resize', checkMobile);
     
+    // Restore checkbox states when the component mounts
+    setTimeout(restoreCheckboxStates, 0);
+    
     return () => {
       window.removeEventListener('resize', checkMobile);
     };
@@ -238,12 +241,17 @@
       if (!li.innerHTML.includes('<input type="checkbox"')) {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
+        checkbox.className = 'sticky-note-checkbox'; // Add a class for easier selection
+        checkbox.setAttribute('data-checked', 'false'); // Initialize state attribute
+        
         checkbox.addEventListener('change', (e) => {
           // Prevent the change from triggering a content update
           e.stopPropagation();
+          
           // Update the checkbox state in the HTML
           const target = e.target as HTMLInputElement;
-          target.checked = target.checked;
+          target.setAttribute('data-checked', target.checked ? 'true' : 'false');
+          
           // Trigger a content update
           const contentElement = document.getElementById(`note-content-${note.id}`) as HTMLElement;
           if (contentElement) {
@@ -251,9 +259,40 @@
             dispatch("update", note);
           }
         });
+        
         li.insertBefore(checkbox, li.firstChild);
         li.insertBefore(document.createTextNode(' '), checkbox.nextSibling);
       }
+    });
+  }
+  
+  // Function to restore checkbox states when loading notes
+  function restoreCheckboxStates() {
+    const contentElement = document.getElementById(`note-content-${note.id}`);
+    if (!contentElement) return;
+    
+    const checkboxes = contentElement.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach((element: Element) => {
+      // Cast to HTMLInputElement
+      const checkbox = element as HTMLInputElement;
+      
+      // Restore checked state from data attribute
+      const isChecked = checkbox.getAttribute('data-checked') === 'true';
+      checkbox.checked = isChecked;
+      
+      // Add change event listener
+      checkbox.addEventListener('change', (e) => {
+        e.stopPropagation();
+        const target = e.target as HTMLInputElement;
+        target.setAttribute('data-checked', target.checked ? 'true' : 'false');
+        
+        // Update note content
+        const contentElement = document.getElementById(`note-content-${note.id}`) as HTMLElement;
+        if (contentElement) {
+          note.text = contentElement.innerHTML;
+          dispatch("update", note);
+        }
+      });
     });
   }
 
@@ -268,7 +307,10 @@
     ) as HTMLElement;
     
     if (contentElement) {
+      // Update the note's text content
       note.text = contentElement.innerHTML;
+      
+      // Dispatch the update event with the updated note
       dispatch("update", note);
     }
   }

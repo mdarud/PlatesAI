@@ -96,6 +96,9 @@ const SYSTEM_INSTRUCTION = `You are PlatesAI, an AI cooking assistant that helps
 class AIProviderFactory {
   static getProvider(modelConfig: AIModelConfig = DEFAULT_MODEL_CONFIG) {
     switch (modelConfig.type) {
+      case 'default':
+        // Use Gemini provider with the API key from environment variables
+        return new GeminiProvider(modelConfig);
       case 'gemini':
         return new GeminiProvider(modelConfig);
       case 'openai':
@@ -263,6 +266,25 @@ import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/ge
 
 // Gemini Provider implementation
 class GeminiProvider extends AIProvider {
+  constructor(config: AIModelConfig) {
+    super(config);
+    
+      // If the model type is 'default', try to get the API key from environment variables
+      if (config.type === 'default') {
+        // Get the API key from environment variables
+        const envApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (envApiKey) {
+          this.config = {
+            ...config,
+            apiKey: envApiKey,
+            model: 'gemini-2.5-flash-preview-04-17' as GeminiModelVersion
+          };
+        } else {
+          console.warn('No API key found in environment variables. Please set VITE_GEMINI_API_KEY in .env file.');
+        }
+      }
+  }
+  
   // Validate and complete recipe data
   validateAndCompleteRecipe(recipe: any): any {
     if (!recipe) return null;

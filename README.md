@@ -2,6 +2,10 @@
 
 PlatesAI is an AI-powered recipe assistant that helps you discover, save, and manage recipes. It features a unique sticky note interface for organizing recipes and a smart inventory system that tracks your ingredients.
 
+**Current Version**: Alpha
+
+**Created by**: [Muhammad Daru Darmakusuma](https://github.com/mdarud) | [LinkedIn](https://linkedin.com/in/drmksm)
+
 ## Features
 
 - **AI Recipe Assistant**: Chat with the AI to get recipe suggestions, cooking tips, and more
@@ -68,3 +72,5 @@ The application is designed to work entirely client-side, with no backend depend
 - User preferences and settings
 - Progressive Web App (PWA) features for offline support
 - Enhanced mobile experience
+- Multi-device synchronization
+- Community features for recipe sharing

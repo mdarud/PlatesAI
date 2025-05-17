@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, createEventDispatcher } from 'svelte';
   import { createIcon } from '../utils/icons';
   import type { GroceryItem, Recipe } from '../services/types';
   import { inventoryStore } from '../stores/inventoryStore';
@@ -8,6 +8,8 @@
   import { notesStore } from '../stores/notesStore';
   import RecipeSelectionModal from './RecipeSelectionModal.svelte';
   import GroceryCalendarView from './GroceryCalendarView.svelte';
+  
+  const dispatch = createEventDispatcher();
   
   // Props
   export let userId: string = 'default-user';
@@ -479,6 +481,19 @@
                             {@html createIcon('clock', 14)}
                           </span>
                           <span>{item.scheduled_date}</span>
+                      <button 
+                        class="unschedule-btn" 
+                        on:click|stopPropagation={(e) => {
+                          e.preventDefault();
+                          if (item.id !== undefined) {
+                            groceryStore.scheduleItemForDate(item.id, '');
+                          }
+                        }}
+                        title="Unschedule"
+                      >
+                        <span class="btn-icon">{@html createIcon('clock', 12)}</span>
+                        <span>Unschedule</span>
+                      </button>
                         </div>
                       {/if}
                       
@@ -493,8 +508,8 @@
                     </div>
                     
                     <div class="item-actions">
-                      <button class="icon-action" on:click={() => onEditItem(item)} title="Edit">
-                        {@html createIcon('recipe', 16)}
+                      <button class="edit-action" on:click={() => onEditItem(item)} title="Edit">
+                        {@html createIcon('edit', 16)}
                       </button>
                       <button class="icon-action" on:click={() => removeItem(item.id)} title="Remove">
                         {@html createIcon('delete', 16)}
@@ -913,6 +928,26 @@
     color: var(--dark-gray);
   }
   
+  .unschedule-btn {
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    background-color: var(--primary-light);
+    color: var(--white);
+    margin-left: var(--space-sm);
+  }
+  
+  .unschedule-btn:hover {
+    background-color: var(--primary);
+    transform: translateY(-2px);
+  }
+  
   .date-icon {
     color: var(--primary);
   }
@@ -932,22 +967,61 @@
   }
   
   .icon-action {
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radius-full);
     display: flex;
     align-items: center;
     justify-content: center;
     background: transparent;
-    border: none;
     color: var(--dark-gray);
     cursor: pointer;
     transition: all var(--transition-fast);
+    border: 1px solid var(--light-gray);
   }
   
   .icon-action:hover {
     background-color: var(--light-gray);
     color: var(--primary);
+  }
+  
+  .edit-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--accent-light);
+    border: none;
+    color: var(--white);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  
+  .edit-action:hover {
+    background-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .edit-btn {
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    background-color: var(--accent-light);
+    color: var(--accent-dark);
+  }
+  
+  .edit-btn:hover {
+    background-color: var(--accent);
+    color: var(--white);
+  }
+  
+  .btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .loading-container {
