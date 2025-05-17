@@ -126,8 +126,6 @@ abstract class AIProvider {
 // Mock Provider implementation
 class MockProvider extends AIProvider {
   async generateResponse(request: ChatRequest): Promise<AIResponse> {
-    console.log('Using mock response for:', request.message);
-    
     // Check for recipe-related keywords
     const isRecipeRequest = /recipe|pasta|cook|food|dish|meal|breakfast|lunch|dinner/i.test(request.message);
     const isInventoryRequest = /inventory|ingredients|grocery|shopping|add|remove|update/i.test(request.message);
@@ -279,8 +277,6 @@ class GeminiProvider extends AIProvider {
             apiKey: envApiKey,
             model: 'gemini-2.5-flash-preview-04-17' as GeminiModelVersion
           };
-        } else {
-          console.warn('No API key found in environment variables. Please set VITE_GEMINI_API_KEY in .env file.');
         }
       }
   }
@@ -332,8 +328,6 @@ class GeminiProvider extends AIProvider {
   }
   async generateResponse(request: ChatRequest): Promise<AIResponse> {
     try {
-      console.log('Using Gemini API with config:', this.config);
-      
       // Check if API key is provided
       if (!this.config.apiKey) {
         throw new Error('Gemini API key is missing. Please provide an API key in the settings.');
@@ -528,7 +522,6 @@ class GeminiProvider extends AIProvider {
               }
             }
           } catch (parseError) {
-            console.error('Error parsing JSON content:', parseError);
             // Fall back to default response
             aiResponseJson = {
               intent: 'cooking_question',
@@ -543,7 +536,6 @@ class GeminiProvider extends AIProvider {
           };
         }
       } catch (error) {
-        console.error('Error processing AI response:', error);
         // Create a default response
         aiResponseJson = {
           intent: 'cooking_question',
@@ -554,7 +546,6 @@ class GeminiProvider extends AIProvider {
       return aiResponseJson;
       
     } catch (error) {
-      console.error('Error generating Gemini AI response:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       return {
         intent: 'unknown',
@@ -568,14 +559,11 @@ class GeminiProvider extends AIProvider {
 class OpenAIProvider extends AIProvider {
   async generateResponse(request: ChatRequest): Promise<AIResponse> {
     try {
-      console.log('Using OpenAI API with config:', this.config);
-      
       // TODO: Implement real API call to OpenAI API
       // For now, use mock response
       const mockProvider = new MockProvider(this.config);
       return await mockProvider.generateResponse(request);
     } catch (error) {
-      console.error('Error generating OpenAI response:', error);
       return {
         intent: 'unknown',
         ai_response: 'Sorry, I encountered an error while processing your request with OpenAI. Please try again later.'
@@ -588,14 +576,11 @@ class OpenAIProvider extends AIProvider {
 class ClaudeProvider extends AIProvider {
   async generateResponse(request: ChatRequest): Promise<AIResponse> {
     try {
-      console.log('Using Claude API with config:', this.config);
-      
       // TODO: Implement real API call to Claude API
       // For now, use mock response
       const mockProvider = new MockProvider(this.config);
       return await mockProvider.generateResponse(request);
     } catch (error) {
-      console.error('Error generating Claude AI response:', error);
       return {
         intent: 'unknown',
         ai_response: 'Sorry, I encountered an error while processing your request with Claude. Please try again later.'
@@ -617,7 +602,6 @@ export const aiService = {
       const provider = AIProviderFactory.getProvider(modelConfig);
       return await provider.generateResponse(request);
     } catch (error) {
-      console.error('Error generating AI response:', error);
       return {
         intent: 'unknown',
         ai_response: 'Sorry, I encountered an error while processing your request. Please try again later.'
@@ -644,7 +628,6 @@ export const aiService = {
       // Use the standard generateResponse method
       return await aiService.generateResponse(newRequest);
     } catch (error) {
-      console.error('Error generating AI response with inventory:', error);
       return {
         intent: 'unknown',
         ai_response: 'Sorry, I encountered an error while processing your request with your inventory. Please try again later.'
@@ -995,7 +978,6 @@ export const aiService = {
         confidence
       };
     } catch (error) {
-      console.error('Error parsing recipe text:', error);
       return {
         success: false,
         error: 'An error occurred while parsing the recipe.',
@@ -1072,8 +1054,6 @@ Please extract the following information:
       // If no recipe in response, fall back to regex parsing
       return aiService.parseRecipeText(recipeText, userId);
     } catch (error) {
-      console.error('Error parsing recipe with AI:', error);
-      
       // Fall back to regex parsing
       return aiService.parseRecipeText(recipeText, userId);
     }
@@ -1175,7 +1155,6 @@ Please extract the following information:
         result
       };
     } catch (error) {
-      console.error('Error converting units:', error);
       return {
         success: false,
         error: 'An error occurred during unit conversion.'
