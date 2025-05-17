@@ -449,14 +449,17 @@ class DBService {
       if (notesJson) {
         const notes = JSON.parse(notesJson);
         for (const note of notes) {
+          // Ensure note has a valid string ID
+          const noteId = note.id ? note.id.toString() : Date.now().toString();
           await this.saveNote({
-            id: note.id.toString(),
-            content: note.text,
-            color: note.color,
-            position: { x: note.x, y: note.y },
+            id: noteId,
+            title: note.title || `Note ${noteId}`,
+            content: note.text || '',
+            color: note.color || '#FFB84C',
+            position: { x: note.x || 100, y: note.y || 100 },
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            user_id: 'default-user'
+            user_id: note.user_id || 'default-user'
           });
         }
       }
@@ -470,6 +473,10 @@ class DBService {
       if (recipesJson) {
         const recipes = JSON.parse(recipesJson);
         for (const recipe of recipes) {
+          // Ensure recipe has a valid ID
+          if (!recipe.id) {
+            recipe.id = Date.now() + Math.floor(Math.random() * 1000);
+          }
           await this.saveRecipe(recipe);
         }
       }
@@ -483,6 +490,10 @@ class DBService {
       if (inventoryJson) {
         const inventory = JSON.parse(inventoryJson);
         for (const item of inventory) {
+          // Ensure item has a valid ID
+          if (!item.id) {
+            item.id = Date.now() + Math.floor(Math.random() * 1000);
+          }
           await this.saveInventoryItem(item);
         }
       }
@@ -496,7 +507,27 @@ class DBService {
       if (chatHistoryJson) {
         const chatHistory = JSON.parse(chatHistoryJson);
         for (const message of chatHistory) {
-          await this.saveChatMessage(message);
+          // Ensure message has a valid ID
+          if (!message.id) {
+            message.id = Date.now() + Math.floor(Math.random() * 1000);
+          }
+          
+          // Ensure message has all required fields
+          const validMessage = {
+            id: message.id,
+            user_id: message.user_id || 'default-user',
+            message: message.message || message.text || '',
+            response: message.response || '',
+            timestamp: message.timestamp || new Date().toISOString(),
+            intent: message.intent || 'chat',
+            recipe_id: message.recipe_id
+          };
+          
+          try {
+            await this.saveChatMessage(validMessage);
+          } catch (innerError) {
+            console.warn('Skipping invalid chat message:', message, innerError);
+          }
         }
       }
     } catch (error) {
@@ -509,16 +540,43 @@ class DBService {
       if (groceryListsJson) {
         const groceryLists = JSON.parse(groceryListsJson);
         for (const list of groceryLists) {
-          await this.saveGroceryList(list);
+          // Ensure list has a valid ID
+          if (!list.id) {
+            list.id = Date.now() + Math.floor(Math.random() * 1000);
+          }
           
-          // Save each item in the list
-          if (list.items && list.items.length > 0) {
-            for (const item of list.items) {
-              await this.saveGroceryItem({
-                ...item,
-                list_id: list.id
-              });
+          // Save the list first
+          try {
+            await this.saveGroceryList(list);
+            
+            // Save each item in the list
+            if (list.items && Array.isArray(list.items) && list.items.length > 0) {
+              for (const item of list.items) {
+                // Ensure item has a valid ID and list_id
+                if (!item.id) {
+                  item.id = Date.now() + Math.floor(Math.random() * 1000);
+                }
+                
+                const validItem = {
+                  ...item,
+                  id: item.id,
+                  list_id: list.id,
+                  user_id: item.user_id || list.user_id || 'default-user',
+                  name: item.name || '',
+                  amount: item.amount || '1',
+                  checked: item.checked || item.is_checked || false,
+                  is_checked: item.is_checked || item.checked || false
+                };
+                
+                try {
+                  await this.saveGroceryItem(validItem);
+                } catch (itemError) {
+                  console.warn('Skipping invalid grocery item:', item, itemError);
+                }
+              }
             }
+          } catch (listError) {
+            console.warn('Skipping invalid grocery list:', list, listError);
           }
         }
       }
@@ -532,6 +590,10 @@ class DBService {
       if (timersJson) {
         const timers = JSON.parse(timersJson);
         for (const timer of timers) {
+          // Ensure timer has a valid ID
+          if (!timer.id) {
+            timer.id = Date.now() + Math.floor(Math.random() * 1000);
+          }
           await this.saveTimer(timer);
         }
       }
@@ -545,6 +607,11 @@ class DBService {
       if (usersJson) {
         const users = JSON.parse(usersJson);
         for (const user of users) {
+          // Ensure user has a valid ID
+          if (!user.id) {
+            user.id = 'default-user';
+          }
+          
           await this.saveUser(user);
           
           // Save user preferences

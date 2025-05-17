@@ -296,8 +296,9 @@
                 <button class="icon-action" on:click={() => onEditItem(item)} title="Edit">
                   {@html createIcon('edit', 16)}
                 </button>
-                <button class="icon-action" on:click={() => unscheduleItem(item.id)} title="Unschedule">
-                  {@html createIcon('clock', 16)}
+                <button class="unschedule-btn" on:click={() => unscheduleItem(item.id)} title="Unschedule">
+                  <span class="btn-icon">{@html createIcon('clock', 16)}</span>
+                  <span>Unschedule</span>
                 </button>
                 <button class="icon-action" on:click={() => removeItem(item.id)} title="Remove">
                   {@html createIcon('delete', 16)}
@@ -586,6 +587,31 @@
   .icon-action:hover {
     background-color: var(--light-gray);
     color: var(--primary);
+  }
+  
+  .unschedule-btn {
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    background-color: var(--primary-light);
+    color: var(--white);
+  }
+  
+  .unschedule-btn:hover {
+    background-color: var(--primary);
+    transform: translateY(-2px);
+  }
+  
+  .btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .loading-container {

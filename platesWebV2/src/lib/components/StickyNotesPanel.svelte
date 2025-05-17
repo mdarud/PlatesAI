@@ -15,21 +15,135 @@
   let expandedNotes: Note[] = [];
   let showAddNoteForm = false;
   let newNoteText = '';
+  let newNoteTitle = '';
+  let searchQuery = '';
+  let selectedCategory = 'all';
+  let selectedTag = '';
+  let isLoading = true;
+  let categories: string[] = [];
+  let tags: string[] = [];
+  let filteredNotes: Note[] = [];
+  let sortBy: 'newest' | 'oldest' | 'alphabetical' = 'newest';
   
   // Subscribe to the notes store
   const unsubscribe = notesStore.subscribe(value => {
     notes = value;
+    
     // Separate notes into minimized and expanded
     minimizedNotes = notes.filter(note => note.minimized);
     expandedNotes = notes.filter(note => !note.minimized);
+    
+    // Get categories and tags
+    categories = ['all', ...notesStore.getCategories()];
+    tags = notesStore.getTags();
+    
+    // Apply filters
+    applyFilters();
   });
   
-  // Clean up subscription on component destruction
+  // Apply filters and sorting to notes
+  function applyFilters() {
+    // Start with all notes
+    let filtered = [...notes];
+    
+    // Apply search filter if query exists
+    if (searchQuery.trim()) {
+      const lowerQuery = searchQuery.toLowerCase();
+      filtered = filtered.filter(note => 
+        note.title.toLowerCase().includes(lowerQuery) || 
+        note.text.toLowerCase().includes(lowerQuery) ||
+        (note.tags && note.tags.some(tag => tag.toLowerCase().includes(lowerQuery)))
+      );
+    }
+    
+    // Apply category filter if not 'all'
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(note => note.category === selectedCategory);
+    }
+    
+    // Apply tag filter if selected
+    if (selectedTag) {
+      filtered = filtered.filter(note => 
+        note.tags && note.tags.includes(selectedTag)
+      );
+    }
+    
+    // Apply sorting
+    switch (sortBy) {
+      case 'newest':
+        filtered.sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateB - dateA;
+        });
+        break;
+      case 'oldest':
+        filtered.sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateA - dateB;
+        });
+        break;
+      case 'alphabetical':
+        filtered.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+    }
+    
+    // Update filtered notes
+    filteredNotes = filtered;
+    
+    // Separate filtered notes into minimized and expanded
+    minimizedNotes = filteredNotes.filter(note => note.minimized);
+    expandedNotes = filteredNotes.filter(note => !note.minimized);
+  }
+  
+  // Load notes and clean up subscription on component destruction
   onMount(() => {
+    isLoading = true;
+    
+    // Load notes from storage when component mounts
+    console.log('Loading notes for user:', user_id);
+    
+    // Load notes with the improved store method
+    notesStore.loadUserNotes(user_id)
+      .then(loadedNotes => {
+        console.log('Loaded notes:', loadedNotes);
+        
+        // Apply initial filters
+        applyFilters();
+      })
+      .catch(error => {
+        console.error('Error loading notes:', error);
+      })
+      .finally(() => {
+        isLoading = false;
+      });
+    
+    // Return the cleanup function
     return () => {
       unsubscribe();
     };
   });
+  
+  // Clear search and filters
+  function clearFilters() {
+    searchQuery = '';
+    selectedCategory = 'all';
+    selectedTag = '';
+    applyFilters();
+  }
+  
+  // Get category badge color
+  function getCategoryColor(category: string): string {
+    const categoryColors: Record<string, string> = {
+      'Recipe': 'var(--note-mint, #4ECDC4)',
+      'Grocery': 'var(--note-marigold, #FFB84C)',
+      'Inventory': 'var(--note-sky, #60A5FA)',
+      'General': 'var(--note-coral, #FF6B6B)'
+    };
+    
+    return categoryColors[category] || 'var(--medium-gray)';
+  }
   
   // Handle note updates
   function handleNoteUpdate(event: CustomEvent<Note>) {
@@ -45,17 +159,35 @@
   
   // Add a new note
   function addNote() {
-    if (newNoteText.trim()) {
+    if (newNoteText.trim() || newNoteTitle.trim()) {
       // Calculate position for new note using a grid-based placement
       const position = calculateNotePosition();
       
-      notesStore.addNote(newNoteText, position.x, position.y);
+      // Create the note
+      notesStore.addNote(newNoteText, position.x, position.y, user_id);
+      
+      // If title is provided, find the newly created note and update its title
+      if (newNoteTitle.trim()) {
+        // The note will be the last one in the notes array
+        setTimeout(() => {
+          if (notes.length > 0) {
+            const latestNote = notes[notes.length - 1];
+            if (latestNote) {
+              latestNote.title = newNoteTitle.trim();
+              notesStore.updateNote(latestNote, user_id);
+            }
+          }
+        }, 100);
+      }
+      
+      // Clear form
       newNoteText = '';
+      newNoteTitle = '';
       showAddNoteForm = false;
     } else {
       // Add an empty note if no text is provided
       const position = calculateNotePosition();
-      notesStore.addNote('', position.x, position.y);
+      notesStore.addNote('', position.x, position.y, user_id);
       showAddNoteForm = false;
     }
   }
@@ -160,7 +292,10 @@
 
 <div class="sticky-notes-panel">
   <div class="panel-header">
-    <h2>Sticky Notes</h2>
+    <div class="header-title">
+      <h2>Sticky Notes</h2>
+      <span class="note-count">{notes.length} notes</span>
+    </div>
     <button class="add-note-button" on:click={() => showAddNoteForm = !showAddNoteForm}>
       {#if showAddNoteForm}
         <span class="icon-wrapper">
@@ -174,12 +309,86 @@
     </button>
   </div>
   
+  <!-- Search and filter bar -->
+  <div class="search-filter-bar">
+    <div class="search-container">
+      <span class="search-icon">
+        {@html createIcon('search', 16)}
+      </span>
+      <input 
+        type="text" 
+        placeholder="Search notes..." 
+        bind:value={searchQuery}
+        on:input={applyFilters}
+        class="search-input"
+      />
+      {#if searchQuery}
+        <button class="clear-search" on:click={() => { searchQuery = ''; applyFilters(); }}>
+          {@html createIcon('close', 14)}
+        </button>
+      {/if}
+    </div>
+    
+    <div class="filter-sort-container">
+      <select 
+        bind:value={selectedCategory} 
+        on:change={applyFilters}
+        class="filter-select"
+        aria-label="Filter by category"
+      >
+        {#each categories as category}
+          <option value={category}>
+            {category === 'all' ? 'All Categories' : category}
+          </option>
+        {/each}
+      </select>
+      
+      {#if tags.length > 0}
+        <select 
+          bind:value={selectedTag} 
+          on:change={applyFilters}
+          class="filter-select"
+          aria-label="Filter by tag"
+        >
+          <option value="">All Tags</option>
+          {#each tags as tag}
+            <option value={tag}>#{tag}</option>
+          {/each}
+        </select>
+      {/if}
+      
+      <select 
+        bind:value={sortBy} 
+        on:change={applyFilters}
+        class="filter-select"
+        aria-label="Sort notes"
+      >
+        <option value="newest">Newest First</option>
+        <option value="oldest">Oldest First</option>
+        <option value="alphabetical">A-Z</option>
+      </select>
+      
+      {#if searchQuery || selectedCategory !== 'all' || selectedTag}
+        <button class="clear-filters-button" on:click={clearFilters}>
+          Clear Filters
+        </button>
+      {/if}
+    </div>
+  </div>
+  
   {#if showAddNoteForm}
     <div class="add-note-form">
+      <input 
+        type="text" 
+        bind:value={newNoteTitle} 
+        placeholder="Note title..."
+        class="note-title-input"
+      />
       <textarea 
         bind:value={newNoteText} 
-        placeholder="Enter note content..."
+        placeholder="Enter note content... (Use #tag to add tags)"
         rows="4"
+        class="note-content-input"
       ></textarea>
       <div class="form-actions">
         <button class="cancel-button" on:click={() => showAddNoteForm = false}>Cancel</button>
@@ -188,7 +397,12 @@
     </div>
   {/if}
   
-  {#if notes.length === 0}
+  {#if isLoading}
+    <div class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Loading notes...</p>
+    </div>
+  {:else if notes.length === 0}
     <div class="empty-state">
       <p>No sticky notes yet.</p>
       <p>Click the + button to create your first note!</p>
@@ -202,19 +416,52 @@
         {:else}
           <div class="notes-grid">
             {#each expandedNotes as note (note.id)}
-              <div class="note-preview" style="background-color: {note.color}">
+              <div 
+                class="note-preview" 
+                style="background-color: {note.color}"
+                on:click={() => notesStore.bringToFront(note.id)}
+                on:keydown={(e) => e.key === 'Enter' && notesStore.bringToFront(note.id)}
+                tabindex="0"
+                role="button"
+                aria-label="View note"
+              >
                 <div class="preview-header">
-          <div class="preview-title">
-            {note.title || `Note ${note.id}`}
-          </div>
+                  <div class="preview-title">
+                    {note.title || `Note ${note.id}`}
+                  </div>
                   <div class="preview-actions">
-                    <button class="preview-action" on:click={() => deleteNote(note.id)}>
+                    <button 
+                      class="preview-action" 
+                      on:click|stopPropagation={() => deleteNote(note.id)}
+                      aria-label="Delete note"
+                    >
                       {@html createIcon('delete', 14, 'icon-delete')}
                     </button>
                   </div>
                 </div>
                 <div class="preview-content">
-                  {@html note.text.substring(0, 100) + (note.text.length > 100 ? '...' : '')}
+                  {@html note.text.substring(0, 80) + (note.text.length > 80 ? '...' : '')}
+                </div>
+                <div class="preview-footer">
+                  {#if note.category && note.category !== 'General'}
+                    <span 
+                      class="category-badge" 
+                      style="background-color: {getCategoryColor(note.category)}"
+                    >
+                      {note.category}
+                    </span>
+                  {/if}
+                  
+                  {#if note.tags && note.tags.length > 0}
+                    <div class="tags-container">
+                      {#each note.tags.slice(0, 2) as tag}
+                        <span class="tag-badge">#{tag}</span>
+                      {/each}
+                      {#if note.tags.length > 2}
+                        <span class="more-tags">+{note.tags.length - 2}</span>
+                      {/if}
+                    </div>
+                  {/if}
                 </div>
               </div>
             {/each}
@@ -299,10 +546,139 @@
     border-bottom: 1px solid var(--light-gray);
   }
   
+  .header-title {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .note-count {
+    font-size: var(--text-xs);
+    color: var(--medium-gray);
+    margin-top: var(--space-xs);
+  }
+  
   .panel-header h2 {
     margin: 0;
     font-size: var(--text-xl);
     color: var(--dark);
+  }
+  
+  /* Search and filter styles */
+  .search-filter-bar {
+    margin-bottom: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  
+  .search-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  
+  .search-icon {
+    position: absolute;
+    left: var(--space-sm);
+    color: var(--medium-gray);
+  }
+  
+  .search-input {
+    width: 100%;
+    padding: var(--space-sm) var(--space-sm) var(--space-sm) calc(var(--space-sm) * 2 + 16px);
+    border: 1px solid var(--light-gray);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+  }
+  
+  .clear-search {
+    position: absolute;
+    right: var(--space-sm);
+    background: transparent;
+    border: none;
+    color: var(--medium-gray);
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .filter-sort-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+  }
+  
+  .filter-select {
+    flex: 1;
+    min-width: 100px;
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--light-gray);
+    border-radius: var(--radius-md);
+    font-size: var(--text-xs);
+    background-color: var(--white);
+  }
+  
+  .clear-filters-button {
+    padding: var(--space-xs) var(--space-sm);
+    background-color: var(--light-gray);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  
+  .clear-filters-button:hover {
+    background-color: var(--medium-gray);
+    color: var(--white);
+  }
+  
+  /* Loading state */
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xl);
+    color: var(--medium-gray);
+  }
+  
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--light-gray);
+    border-top: 3px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: var(--space-md);
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  /* Note title input */
+  .note-title-input {
+    width: 100%;
+    padding: var(--space-sm);
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-sm);
+    font-family: var(--font-primary);
+    font-weight: 600;
+  }
+  
+  .note-content-input {
+    width: 100%;
+    padding: var(--space-sm);
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-sm);
+    font-family: var(--font-primary);
+    resize: vertical;
   }
   
   .add-note-button {
@@ -495,6 +871,51 @@
     font-size: 0.8rem;
     overflow: hidden;
     flex: 1;
+  }
+  
+  /* Preview footer with category and tags */
+  .preview-footer {
+    padding: var(--space-xs) var(--space-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.7rem;
+    background-color: rgba(0, 0, 0, 0.03);
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    min-height: 24px;
+  }
+  
+  .category-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .tags-container {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  
+  .tag-badge {
+    display: inline-block;
+    padding: 1px 4px;
+    border-radius: var(--radius-sm);
+    background-color: rgba(0, 0, 0, 0.1);
+    color: var(--dark-gray);
+    font-size: 0.65rem;
+  }
+  
+  .more-tags {
+    font-size: 0.65rem;
+    color: var(--medium-gray);
+    opacity: 0.8;
   }
   
   /* Minimized notes section styling */

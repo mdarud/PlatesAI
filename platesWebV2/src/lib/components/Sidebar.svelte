@@ -21,6 +21,10 @@
   <!-- App Logo -->
   <div class="logo-container">
     <div class="logo">
+      <div class="logo-icon">
+        <span class="plate-icon">🍽️</span>
+        <span class="food-icon">🥘</span>
+      </div>
       <span class="logo-text">Plates<span class="accent">AI</span></span>
     </div>
   </div>
@@ -55,7 +59,23 @@
     </div>
     <div class="user-info">
       <span class="user-name">User</span>
-      <span class="user-status">Free Plan</span>
+      <span class="user-status">Alpha Version</span>
+    </div>
+  </div>
+  
+  <!-- About Section -->
+  <div class="about-section">
+    <h4 class="about-title">Created by</h4>
+    <div class="creator-info">
+      <span class="creator-name">Daru</span>
+      <div class="creator-links">
+        <a href="https://github.com/mdarud" target="_blank" rel="noopener noreferrer" class="creator-link">
+          <span class="link-text">github.com/mdarud</span>
+        </a>
+        <a href="https://linkedin.com/in/drmksm" target="_blank" rel="noopener noreferrer" class="creator-link">
+          <span class="link-text">linkedin.com/in/drmksm</span>
+        </a>
+      </div>
     </div>
   </div>
 </div>
@@ -79,6 +99,29 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 0.75rem;
+  }
+  
+  .logo-icon {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .plate-icon {
+    position: absolute;
+    font-size: 2rem;
+    z-index: 1;
+  }
+  
+  .food-icon {
+    position: absolute;
+    font-size: 1.2rem;
+    z-index: 2;
+    transform: translateY(-2px);
   }
   
   .logo-text {
@@ -150,6 +193,7 @@
     padding: 1rem 1.25rem;
     border-top: 1px solid var(--border-light);
     margin-top: auto;
+    margin-bottom: 0;
   }
   
   .user-avatar {
@@ -178,6 +222,60 @@
     color: var(--text-muted);
   }
   
+  /* About Section */
+  .about-section {
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--border-light);
+    font-size: 0.85rem;
+  }
+  
+  .about-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  
+  .creator-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .creator-name {
+    font-weight: 500;
+    color: var(--text-dark);
+  }
+  
+  .creator-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .creator-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 0.75rem;
+    transition: color 0.2s ease;
+  }
+  
+  .creator-link:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+  }
+  
+  .link-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
   @media (max-width: 768px) {
     .logo-container {
       padding: 1rem;
@@ -189,6 +287,10 @@
     }
     
     .user-profile {
+      padding: 0.75rem 1rem;
+    }
+    
+    .about-section {
       padding: 0.75rem 1rem;
     }
   }

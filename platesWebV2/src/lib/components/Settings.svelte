@@ -29,10 +29,11 @@
   onDestroy(unsubscribe);
   
   // Available model types
-  const modelTypes: AIModelType[] = ['gemini', 'openai', 'claude', 'mock'];
+  const modelTypes: AIModelType[] = ['default', 'gemini', 'openai', 'claude', 'mock'];
   
   // Model versions for each provider
   const modelVersions = {
+    default: ['default'] as MockModelVersion[],
     gemini: ['gemini-2.5-flash-preview-04-17', 'gemini-pro', 'gemini-1.5-pro'] as GeminiModelVersion[],
     openai: ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo'] as OpenAIModelVersion[],
     claude: ['claude-3-sonnet', 'claude-3-opus', 'claude-3-haiku'] as ClaudeModelVersion[],
@@ -230,43 +231,51 @@
     </p>
   </div>
   
-  <div class="settings-group">
-    <label for="modelVersion">Model Version</label>
-    <select 
-      id="modelVersion" 
-      value={modelConfig.model} 
-      on:change={handleModelVersionChange}
-      class="select-input"
-      disabled={isLoading}
-    >
-      {#each modelVersions[modelConfig.type] as version}
-        <option value={version}>{version}</option>
-      {/each}
-    </select>
-  </div>
-  
-  <div class="settings-group">
-    <label for="apiKey">API Key</label>
-    <div class="api-key-input">
-      <input 
-        type={showApiKey ? "text" : "password"}
-        id="apiKey" 
-        value={modelConfig.apiKey} 
-        on:input={handleApiKeyChange}
-        placeholder="Enter your API key"
-        class="text-input"
-        disabled={isLoading}
-      />
-      <button 
-        class="icon-button" 
-        title="Show/Hide API Key"
-        on:click={toggleApiKeyVisibility}
+  {#if modelConfig.type !== 'default'}
+    <div class="settings-group">
+      <label for="modelVersion">Model Version</label>
+      <select 
+        id="modelVersion" 
+        value={modelConfig.model} 
+        on:change={handleModelVersionChange}
+        class="select-input"
         disabled={isLoading}
       >
-        {@html createIcon(showApiKey ? 'eye-off' : 'eye', 20)}
-      </button>
+        {#each modelVersions[modelConfig.type] as version}
+          <option value={version}>{version}</option>
+        {/each}
+      </select>
     </div>
-  </div>
+    
+    <div class="settings-group">
+      <label for="apiKey">API Key</label>
+      <div class="api-key-input">
+        <input 
+          type={showApiKey ? "text" : "password"}
+          id="apiKey" 
+          value={modelConfig.apiKey} 
+          on:input={handleApiKeyChange}
+          placeholder="Enter your API key"
+          class="text-input"
+          disabled={isLoading}
+        />
+        <button 
+          class="icon-button" 
+          title="Show/Hide API Key"
+          on:click={toggleApiKeyVisibility}
+          disabled={isLoading}
+        >
+          {@html createIcon(showApiKey ? 'eye-off' : 'eye', 20)}
+        </button>
+      </div>
+    </div>
+  {:else}
+    <div class="settings-group">
+      <div class="info-box">
+        <p>Using default AI model settings provided by PlatesAI</p>
+      </div>
+    </div>
+  {/if}
   
   <div class="settings-group">
     <label for="temperature">Temperature ({modelConfig.temperature})</label>
@@ -541,5 +550,22 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  
+  .info-box {
+    background-color: var(--accent-light, #3498db);
+    color: var(--white);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+  }
+  
+  .info-box p {
+    margin: 0 0 0.5rem 0;
+    font-size: var(--text-sm);
+  }
+  
+  .info-box p:last-child {
+    margin-bottom: 0;
   }
 </style>

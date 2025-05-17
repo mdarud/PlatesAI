@@ -18,7 +18,7 @@ export interface UserPreferences {
 }
 
 // AI model types
-export type AIModelType = 'gemini' | 'openai' | 'claude' | 'mock';
+export type AIModelType = 'default' | 'gemini' | 'openai' | 'claude' | 'mock';
 
 // Ingredient check method
 export type IngredientCheckMethod = 'ai' | 'direct';
@@ -201,15 +201,16 @@ export interface MealPlanItem {
 }
 
 // Timer model
-export interface Timer {
+export type Timer = {
   id: number;
+  user_id: string;
   label: string;
-  duration: number; // in seconds
-  remaining: number; // in seconds
+  duration: number;
+  remaining: number;
   is_running: boolean;
   is_completed: boolean;
   created_at: string;
-}
+};
 
 // AI response schema
 export interface AIResponse {

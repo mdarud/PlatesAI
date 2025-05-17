@@ -290,7 +290,7 @@
               </div>
               <div class="item-actions">
                 <button 
-                  class="icon-button edit-button" 
+                  class="icon-action" 
                   on:click={() => onEditItem(item)}
                   title="Edit item"
                 >
@@ -542,6 +542,31 @@
   .item-actions {
     display: flex;
     gap: var(--space-xs);
+  }
+  
+  .edit-btn {
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    background-color: var(--accent-light);
+    color: var(--accent-dark);
+  }
+  
+  .edit-btn:hover {
+    background-color: var(--accent);
+    color: var(--white);
+  }
+  
+  .btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .icon-button {
