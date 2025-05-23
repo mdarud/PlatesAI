@@ -74,3 +74,5 @@ The application is designed to work entirely client-side, with no backend depend
 - Enhanced mobile experience
 - Multi-device synchronization
 - Community features for recipe sharing
+
+
