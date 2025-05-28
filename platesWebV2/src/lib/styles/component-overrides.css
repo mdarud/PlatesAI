@@ -1,0 +1,41 @@
+/* Component Overrides */
+
+/* Override ChatArea styles to prevent it from taking up all the space */
+:global(.chat-area) {
+  position: relative !important;
+  z-index: 1 !important;
+  height: auto !important;
+}
+
+/* Make section containers visible */
+:global(.section-container) {
+  display: block !important;
+  position: relative !important;
+  z-index: 10 !important;
+  min-height: 500px !important;
+  background-color: white !important;
+  margin: 20px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Make debug info more visible */
+:global(.debug-info) {
+  position: fixed !important;
+  top: 10px !important;
+  right: 10px !important;
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  color: white !important;
+  padding: 8px 12px !important;
+  font-size: 14px !important;
+  z-index: 2000 !important;
+  border-radius: 4px !important;
+}
+
+/* Fix content container */
+:global(.content-container) {
+  position: relative !important;
+  display: block !important;
+  overflow: auto !important;
+  height: 100% !important;
+}
