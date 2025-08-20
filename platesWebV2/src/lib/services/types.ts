@@ -29,7 +29,7 @@ export type GeminiModelVersion =
   | 'gemini-1.5-pro' 
   | 'gemini-1.5-flash' 
   | 'gemini-1.5-flash-preview-04-17'
-  | 'gemini-2.5-flash-preview-04-17';
+  | 'gemini-2.5-flash';
 
 export type OpenAIModelVersion = 'gpt-3.5-turbo' | 'gpt-4' | 'gpt-4-turbo';
 

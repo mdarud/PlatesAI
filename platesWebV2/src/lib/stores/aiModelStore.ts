@@ -13,7 +13,7 @@ import { aiModelConfigService } from '../services/dataService';
 
 // Default model versions for each provider
 const DEFAULT_MODEL_VERSIONS = {
-  gemini: 'gemini-2.5-flash-preview-04-17' as GeminiModelVersion,
+  gemini: 'gemini-2.5-flash' as GeminiModelVersion,
   openai: 'gpt-3.5-turbo' as OpenAIModelVersion,
   claude: 'claude-3-sonnet' as ClaudeModelVersion,
   mock: 'default' as MockModelVersion
@@ -25,7 +25,7 @@ const DEFAULT_MODEL_CONFIG: AIModelConfig = {
   apiKey: '', // Will be loaded from environment variables when type is 'default'
   temperature: 0.7,
   maxTokens: 4096,
-  model: 'gemini-2.5-flash-preview-04-17' as GeminiModelVersion,
+  model: 'gemini-2.5-flash' as GeminiModelVersion,
   ingredientCheckMethod: 'direct' // Default to direct comparison for reliability
 };
 

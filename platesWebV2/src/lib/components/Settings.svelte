@@ -34,7 +34,7 @@
   // Model versions for each provider
   const modelVersions = {
     default: ['default'] as MockModelVersion[],
-    gemini: ['gemini-2.5-flash-preview-04-17', 'gemini-pro', 'gemini-1.5-pro'] as GeminiModelVersion[],
+    gemini: ['gemini-2.5-flash', 'gemini-pro', 'gemini-1.5-pro'] as GeminiModelVersion[],
     openai: ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo'] as OpenAIModelVersion[],
     claude: ['claude-3-sonnet', 'claude-3-opus', 'claude-3-haiku'] as ClaudeModelVersion[],
     mock: ['default'] as MockModelVersion[]

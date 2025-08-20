@@ -4,7 +4,7 @@ import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/ge
 
 // Gemini API configuration
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const MODEL_NAME = 'gemini-2.5-flash-preview-04-17'; // Using Gemini 2.5 Preview model
+const MODEL_NAME = 'gemini-2.5-flash'; // Using Gemini 2.5 Preview model
 
 // Initialize the Google Generative AI
 const genAI = new GoogleGenerativeAI(API_KEY);

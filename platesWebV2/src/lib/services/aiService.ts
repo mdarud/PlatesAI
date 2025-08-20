@@ -275,7 +275,7 @@ class GeminiProvider extends AIProvider {
           this.config = {
             ...config,
             apiKey: envApiKey,
-            model: 'gemini-2.5-flash-preview-04-17' as GeminiModelVersion
+            model: 'gemini-2.5-flash' as GeminiModelVersion
           };
         }
       }
